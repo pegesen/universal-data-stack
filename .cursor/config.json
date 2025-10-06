@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "mongodb": {
+      "url": "http://localhost:5000"
+    }
+  }
+}
