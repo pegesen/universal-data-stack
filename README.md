@@ -1,6 +1,6 @@
 # Universal Data Stack
 
-[![CI/CD Pipeline](https://github.com/jeffmongo/universal-data-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/jeffmongo/universal-data-stack/actions/workflows/ci.yml)
+[![CI/CD Pipeline](https://github.com/pegesen/universal-data-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/pegesen/universal-data-stack/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green.svg)](https://www.mongodb.com/)
@@ -49,7 +49,7 @@
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/jeffmongo/universal-data-stack.git
+git clone https://github.com/pegesen/universal-data-stack.git
 cd universal-data-stack
 ```
 
