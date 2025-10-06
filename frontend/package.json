@@ -9,7 +9,11 @@
     "preview": "vite preview --host 0.0.0.0 --port 8080",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint . --ext .js,.jsx",
+    "lint:fix": "eslint . --ext .js,.jsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -25,6 +29,38 @@
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/user-event": "^14.5.1",
     "vitest": "^1.0.4",
-    "jsdom": "^23.0.1"
+    "jsdom": "^23.0.1",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.1.0"
+  },
+  "keywords": [
+    "react",
+    "frontend",
+    "vite",
+    "mongodb",
+    "json-editor",
+    "ui",
+    "docker"
+  ],
+  "author": {
+    "name": "Universal Data Stack",
+    "email": "contact@universaldata.com",
+    "url": "https://github.com/jeffmongo/universal-data-stack"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jeffmongo/universal-data-stack.git",
+    "directory": "frontend"
+  },
+  "bugs": {
+    "url": "https://github.com/jeffmongo/universal-data-stack/issues"
+  },
+  "homepage": "https://github.com/jeffmongo/universal-data-stack#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }

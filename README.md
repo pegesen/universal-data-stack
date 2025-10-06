@@ -1,72 +1,43 @@
-# 🚀 Universal Data Stack
+# Universal Data Stack
 
-[![CI/CD Pipeline](https://github.com/yourusername/universal-data-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/universal-data-stack/actions/workflows/ci.yml)
+[![CI/CD Pipeline](https://github.com/jeffmongo/universal-data-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/jeffmongo/universal-data-stack/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green.svg)](https://www.mongodb.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-18.x-brightgreen.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18.x-61dafb.svg)](https://reactjs.org/)
 
-> **Eine komplette Docker-basierte Umgebung für dynamische JSON-Dokumentenverwaltung mit MongoDB, React Frontend und Cursor MCP Integration.**
+> A complete Docker-based environment for dynamic JSON document management with MongoDB, React frontend, and Cursor MCP integration.
 
 ## ✨ Features
 
 ### 🔧 **Backend API**
-- ✅ **Dynamische Collections** - Erstelle beliebige Collections zur Laufzeit
-- ✅ **Vollständige CRUD-Operationen** - GET, POST, PUT, DELETE für alle Collections
-- ✅ **Sicherheit** - Rate Limiting, Input Validation, Helmet Security
-- ✅ **Pagination** - Effiziente Datenverwaltung großer Datensätze
-- ✅ **Error Handling** - Umfassende Fehlerbehandlung und Logging
-- ✅ **Health Checks** - Automatische Überwachung der Services
+- ✅ **Dynamic Collections** - Create arbitrary collections at runtime
+- ✅ **Full CRUD Operations** - GET, POST, PUT, DELETE for all collections
+- ✅ **Security** - Rate limiting, input validation, Helmet security
+- ✅ **Pagination** - Efficient handling of large datasets
+- ✅ **Error Handling** - Comprehensive error handling and logging
+- ✅ **Health Checks** - Automatic service monitoring
 
 ### 🎨 **Frontend**
-- ✅ **Modern React UI** - Vite-basiert mit schönem Design
-- ✅ **JSON-Editor** - Intuitive Eingabe mit Validierung
-- ✅ **Real-time Updates** - Automatische Aktualisierung der Daten
-- ✅ **Responsive Design** - Funktioniert auf allen Geräten
-- ✅ **Error Handling** - Benutzerfreundliche Fehlermeldungen
+- ✅ **Modern React UI** - Vite-based with beautiful design
+- ✅ **JSON Editor** - Intuitive input with validation
+- ✅ **Real-time Updates** - Automatic data refresh
+- ✅ **Responsive Design** - Works on all devices
+- ✅ **Error Handling** - User-friendly error messages
 
 ### 🐳 **Docker & DevOps**
 - ✅ **Multi-Service Setup** - MongoDB, API, Frontend, MCP Server
-- ✅ **Health Checks** - Automatische Überwachung
-- ✅ **Volume Persistence** - Daten bleiben erhalten
-- ✅ **Network Isolation** - Sicher getrennte Services
-- ✅ **CI/CD Pipeline** - Automatische Tests und Deployment
+- ✅ **Health Checks** - Automatic monitoring
+- ✅ **Volume Persistence** - Data persistence
+- ✅ **Network Isolation** - Secure service separation
+- ✅ **CI/CD Pipeline** - Automated testing and deployment
 
 ### 🔌 **Integration**
-- ✅ **Cursor MCP** - Direkte MongoDB-Befehle in Cursor
-- ✅ **Mongo Express** - Web-Admin-Interface
-- ✅ **REST API** - Für eigene Anwendungen
-- ✅ **CORS Support** - Cross-Origin Requests
-
-## 🚀 Services
-
-- **MongoDB** (Port 27017) - Datenbank mit Authentifizierung
-- **Mongo Express** (Port 8081) - Web-Admin-Interface
-- **Node.js API** (Port 3000) - Express + Mongoose mit dynamischen Collections
-- **React Frontend** (Port 8080) - Vite-basierte JSON-Verwaltung
-- **MongoDB MCP Server** (Port 5000) - Cursor Integration
-
-## 📁 Projektstruktur
-
-```
-universal-data-stack/
-├── docker-compose.yml
-├── env.example
-├── README.md
-├── node-app/
-│   ├── package.json
-│   ├── server.js
-│   └── Dockerfile
-└── frontend/
-    ├── package.json
-    ├── vite.config.js
-    ├── index.html
-    ├── Dockerfile
-    └── src/
-        ├── main.jsx
-        └── App.jsx
-```
+- ✅ **Cursor MCP** - Direct MongoDB commands in Cursor
+- ✅ **Mongo Express** - Web admin interface
+- ✅ **REST API** - For custom applications
+- ✅ **CORS Support** - Cross-origin requests
 
 ## 🚀 Quick Start
 
@@ -78,7 +49,7 @@ universal-data-stack/
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/yourusername/universal-data-stack.git
+git clone https://github.com/jeffmongo/universal-data-stack.git
 cd universal-data-stack
 ```
 
@@ -98,6 +69,34 @@ docker compose up -d --build
 - **Mongo Express:** http://localhost:8081
 - **API:** http://localhost:3000
 - **API Health:** http://localhost:3000/health
+
+## 📁 Project Structure
+
+```
+universal-data-stack/
+├── docker-compose.yml
+├── env.example
+├── README.md
+├── LICENSE
+├── .gitignore
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── node-app/
+│   ├── package.json
+│   ├── server.js
+│   ├── Dockerfile
+│   └── tests/
+│       └── server.test.js
+└── frontend/
+    ├── package.json
+    ├── vite.config.js
+    ├── index.html
+    ├── Dockerfile
+    └── src/
+        ├── main.jsx
+        └── App.jsx
+```
 
 ## 🛠️ Development
 
@@ -138,25 +137,18 @@ npm run format
 npm audit
 ```
 
-## 🌐 Zugriff
-
-- **Frontend:** http://umbrel.local:8080
-- **Mongo Express:** http://umbrel.local:8081
-- **API:** http://umbrel.local:3000
-- **API Health:** http://umbrel.local:3000/health
-
 ## 📊 API Endpoints
 
-- `GET /api/collections` - Alle Collections auflisten
-- `GET /api/:collection` - Alle Dokumente einer Collection
-- `POST /api/:collection` - Neues Dokument erstellen
-- `GET /api/:collection/:id` - Dokument nach ID abrufen
-- `PUT /api/:collection/:id` - Dokument aktualisieren
-- `DELETE /api/:collection/:id` - Dokument löschen
+- `GET /api/collections` - List all collections
+- `GET /api/:collection` - Get all documents from collection
+- `POST /api/:collection` - Create new document
+- `GET /api/:collection/:id` - Get document by ID
+- `PUT /api/:collection/:id` - Update document by ID
+- `DELETE /api/:collection/:id` - Delete document by ID
 
 ## 🔧 Cursor MCP Integration
 
-Der MongoDB MCP-Server ist automatisch in der Cursor-Konfiguration eingetragen. Du kannst direkt in Cursor MongoDB-Befehle verwenden:
+The MongoDB MCP server is automatically configured in Cursor. You can use MongoDB commands directly in Cursor:
 
 ```
 @mongodb find users
@@ -164,35 +156,13 @@ Der MongoDB MCP-Server ist automatisch in der Cursor-Konfiguration eingetragen. 
 @mongodb list collections
 ```
 
-## 🎯 Features
-
-### Frontend
-- ✅ Collection-Auswahl
-- ✅ JSON-Eingabe mit Validierung
-- ✅ Dokumentenliste mit Löschfunktion
-- ✅ Responsive Design
-- ✅ Real-time Updates
-
-### API
-- ✅ Dynamische Collections
-- ✅ Vollständige CRUD-Operationen
-- ✅ Pagination
-- ✅ Fehlerbehandlung
-- ✅ CORS-Unterstützung
-
-### Docker
-- ✅ Multi-Service Setup
-- ✅ Health Checks
-- ✅ Volume Persistence
-- ✅ Network Isolation
-
-## 🛑 Stoppen
+## 🛑 Stop Services
 
 ```bash
 docker compose down
 ```
 
-## 🗑️ Komplett löschen
+## 🗑️ Complete Cleanup
 
 ```bash
 docker compose down -v
@@ -201,16 +171,31 @@ docker system prune -f
 
 ## 🔍 Troubleshooting
 
-1. **Port-Konflikte:** Prüfe ob Ports 27017, 3000, 5000, 8080, 8081 frei sind
-2. **MongoDB-Verbindung:** Warte bis MongoDB vollständig gestartet ist
-3. **Frontend lädt nicht:** Prüfe ob API-Service läuft
-4. **MCP funktioniert nicht:** Starte Cursor nach der Konfiguration neu
+1. **Port Conflicts:** Check if ports 27017, 3000, 5000, 8080, 8081 are available
+2. **MongoDB Connection:** Wait for MongoDB to fully start
+3. **Frontend not loading:** Check if API service is running
+4. **MCP not working:** Restart Cursor after configuration
 
-## 📝 Beispiel-Nutzung
+## 📝 Example Usage
 
-1. Öffne http://umbrel.local:8080
-2. Wähle eine Collection (z.B. "users")
-3. Gib JSON ein: `{"name": "Max Mustermann", "age": 30}`
-4. Klicke "Save Document"
-5. Dokument erscheint in der Liste
-6. Verwende @mongodb in Cursor für erweiterte Abfragen
+1. Open http://localhost:8080
+2. Select a collection (e.g., "users")
+3. Enter JSON: `{"name": "John Doe", "age": 30}`
+4. Click "Save Document"
+5. Document appears in the list
+6. Use @mongodb in Cursor for advanced queries
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- MongoDB for the excellent database
+- React team for the amazing frontend framework
+- Docker for containerization
+- Cursor for the MCP integration

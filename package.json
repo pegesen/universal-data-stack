@@ -1,0 +1,78 @@
+{
+  "name": "universal-data-stack",
+  "version": "1.0.0",
+  "description": "A complete Docker-based environment for dynamic JSON document management with MongoDB, React frontend, and Cursor MCP integration",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:frontend\"",
+    "dev:api": "cd node-app && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:api && npm run build:frontend",
+    "build:api": "cd node-app && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:api && npm run test:frontend",
+    "test:api": "cd node-app && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test:watch": "concurrently \"npm run test:api:watch\" \"npm run test:frontend:watch\"",
+    "test:api:watch": "cd node-app && npm run test:watch",
+    "test:frontend:watch": "cd frontend && npm run test:watch",
+    "test:coverage": "npm run test:api:coverage && npm run test:frontend:coverage",
+    "test:api:coverage": "cd node-app && npm run test:coverage",
+    "test:frontend:coverage": "cd frontend && npm run test:coverage",
+    "lint": "npm run lint:api && npm run lint:frontend",
+    "lint:api": "cd node-app && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:fix": "npm run lint:api:fix && npm run lint:frontend:fix",
+    "lint:api:fix": "cd node-app && npm run lint:fix",
+    "lint:frontend:fix": "cd frontend && npm run lint:fix",
+    "format": "npm run format:api && npm run format:frontend",
+    "format:api": "cd node-app && npm run format",
+    "format:frontend": "cd frontend && npm run format",
+    "format:check": "npm run format:api:check && npm run format:frontend:check",
+    "format:api:check": "cd node-app && npm run format:check",
+    "format:frontend:check": "cd frontend && npm run format:check",
+    "install:all": "npm install && cd node-app && npm install && cd ../frontend && npm install",
+    "clean": "rm -rf node_modules node-app/node_modules frontend/node_modules",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:clean": "docker compose down -v && docker system prune -f"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "mongodb",
+    "react",
+    "nodejs",
+    "docker",
+    "express",
+    "vite",
+    "json",
+    "api",
+    "fullstack",
+    "cursor",
+    "mcp",
+    "microservices",
+    "rest-api"
+  ],
+  "author": {
+    "name": "Universal Data Stack",
+    "email": "contact@universaldata.com",
+    "url": "https://github.com/jeffmongo/universal-data-stack"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jeffmongo/universal-data-stack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jeffmongo/universal-data-stack/issues"
+  },
+  "homepage": "https://github.com/jeffmongo/universal-data-stack#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}
