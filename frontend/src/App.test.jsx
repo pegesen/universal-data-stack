@@ -1,15 +1,15 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import '@testing-library/jest-dom'
+import { vi } from 'vitest'
+import axios from 'axios'
 import App from './App'
 
 // Mock axios
-jest.mock('axios')
-const axios = require('axios')
+vi.mock('axios')
 
 describe('App Component', () => {
   beforeEach(() => {
     // Reset mocks before each test
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('renders the main title', () => {
@@ -149,7 +149,7 @@ describe('App Component', () => {
       .mockResolvedValueOnce({ data: { data: [] } })
 
     // Mock window.confirm
-    window.confirm = jest.fn(() => true)
+    window.confirm = vi.fn(() => true)
 
     render(<App />)
 
