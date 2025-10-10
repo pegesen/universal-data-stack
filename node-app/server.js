@@ -36,7 +36,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // MongoDB Connection
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://admin:password123@localhost:27017/universal_data?authSource=admin');
+    // Warnung für unsichere Standard-Passwörter
+    if (!process.env.MONGODB_URI && !process.env.MONGO_PASSWORD) {
+      console.warn('⚠️  WARNUNG: Verwenden Sie ein sicheres Passwort über die Umgebungsvariable MONGO_PASSWORD');
+    }
+    
+    const mongoPassword = process.env.MONGO_PASSWORD || 'CHANGE_ME_IN_PRODUCTION';
+    const mongoUri = process.env.MONGODB_URI || `mongodb://admin:${mongoPassword}@localhost:27017/universal_data?authSource=admin`;
+    
+    await mongoose.connect(mongoUri);
     console.log('✅ MongoDB connected successfully');
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
@@ -76,6 +84,19 @@ const sanitizeInput = (data) => {
   });
   
   return sanitized;
+};
+
+// MongoDB ObjectId validation
+const validateObjectId = (id) => {
+  if (!id || typeof id !== 'string') {
+    throw new Error('Document ID is required and must be a string');
+  }
+  
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new Error('Invalid document ID format');
+  }
+  
+  return id;
 };
 
 // Dynamic Collection Handler
@@ -185,15 +206,19 @@ app.post('/api/:collection', async (req, res) => {
 app.get('/api/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
+    const validatedId = validateObjectId(id);
     const Model = getCollectionModel(collection);
     
-    const document = await Model.findById(id);
+    const document = await Model.findById(validatedId);
     if (!document) {
       return res.status(404).json({ error: 'Document not found' });
     }
     
     res.json(document);
   } catch (error) {
+    if (error.message.includes('Invalid document ID format') || error.message.includes('Document ID is required')) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -202,6 +227,7 @@ app.get('/api/:collection/:id', async (req, res) => {
 app.put('/api/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
+    const validatedId = validateObjectId(id);
     const data = sanitizeInput(req.body);
     
     if (!data || Object.keys(data).length === 0) {
@@ -210,7 +236,7 @@ app.put('/api/:collection/:id', async (req, res) => {
     
     const Model = getCollectionModel(collection);
     const document = await Model.findByIdAndUpdate(
-      id, 
+      validatedId, 
       data, 
       { new: true, runValidators: true }
     );
@@ -222,6 +248,9 @@ app.put('/api/:collection/:id', async (req, res) => {
     res.json(document);
   } catch (error) {
     console.error('Error updating document:', error);
+    if (error.message.includes('Invalid document ID format') || error.message.includes('Document ID is required')) {
+      return res.status(400).json({ error: error.message });
+    }
     if (error.name === 'ValidationError') {
       return res.status(400).json({ error: 'Validation error', details: error.message });
     }
@@ -233,15 +262,19 @@ app.put('/api/:collection/:id', async (req, res) => {
 app.delete('/api/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
+    const validatedId = validateObjectId(id);
     const Model = getCollectionModel(collection);
     
-    const document = await Model.findByIdAndDelete(id);
+    const document = await Model.findByIdAndDelete(validatedId);
     if (!document) {
       return res.status(404).json({ error: 'Document not found' });
     }
     
-    res.json({ message: 'Document deleted successfully', id });
+    res.json({ message: 'Document deleted successfully', id: validatedId });
   } catch (error) {
+    if (error.message.includes('Invalid document ID format') || error.message.includes('Document ID is required')) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: error.message });
   }
 });
