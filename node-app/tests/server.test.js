@@ -1,17 +1,24 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const app = require('../server');
+
+let mongoServer;
 
 describe('Universal Data Stack API', () => {
   beforeAll(async () => {
-    // Connect to test database
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://admin:password123@localhost:27017/test_data?authSource=admin');
+    // Create in-memory MongoDB instance
+    mongoServer = await MongoMemoryServer.create();
+    const mongoUri = mongoServer.getUri();
+    
+    // Connect to in-memory database
+    await mongoose.connect(mongoUri);
   });
 
   afterAll(async () => {
     // Clean up
-    await mongoose.connection.db.dropDatabase();
-    await mongoose.connection.close();
+    await mongoose.disconnect();
+    await mongoServer.stop();
   });
 
   beforeEach(async () => {
@@ -91,8 +98,10 @@ describe('Universal Data Stack API', () => {
         .send(dangerousData);
       
       expect(res.status).toBe(201);
-      expect(res.body.__proto__).toBeUndefined();
-      expect(res.body.constructor).toBeUndefined();
+      expect(res.body.name).toBe('John Doe');
+      // Check that dangerous fields are not stored in the document
+      expect(res.body).not.toHaveProperty('constructor', 'malicious');
+      expect(res.body).not.toHaveProperty('__proto__', { isAdmin: true });
     });
   });
 

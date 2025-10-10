@@ -10,17 +10,23 @@ describe('App Component', () => {
   beforeEach(() => {
     // Reset mocks before each test
     vi.clearAllMocks()
+    // Default mock for collections API call
+    axios.get.mockResolvedValue({ data: { collections: [] } })
   })
 
-  it('renders the main title', () => {
+  it('renders the main title', async () => {
     render(<App />)
-    expect(screen.getByText('Universal Data Stack')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Universal Data Stack')).toBeInTheDocument()
+    })
   })
 
-  it('renders collection selection dropdown', () => {
+  it('renders collection selection dropdown', async () => {
     render(<App />)
-    expect(screen.getByText('Select Collection:')).toBeInTheDocument()
-    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Select Collection:')).toBeInTheDocument()
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
+    })
   })
 
   it('loads collections on mount', async () => {
@@ -89,7 +95,9 @@ describe('App Component', () => {
     axios.get
       .mockResolvedValueOnce({ data: { collections: mockCollections } })
       .mockResolvedValueOnce({ data: { data: [] } })
-      .mockResolvedValueOnce({ data: mockDocument })
+      .mockResolvedValueOnce({ data: { data: [mockDocument] } })
+    
+    axios.post.mockResolvedValueOnce({ data: mockDocument })
 
     render(<App />)
 
@@ -147,6 +155,8 @@ describe('App Component', () => {
       .mockResolvedValueOnce({ data: { collections: mockCollections } })
       .mockResolvedValueOnce({ data: { data: mockDocuments } })
       .mockResolvedValueOnce({ data: { data: [] } })
+    
+    axios.delete.mockResolvedValueOnce({ data: { message: 'Document deleted successfully' } })
 
     // Mock window.confirm
     window.confirm = vi.fn(() => true)

@@ -279,4 +279,10 @@ const startServer = async () => {
   });
 };
 
-startServer().catch(console.error);
+// Only start server if this file is run directly (not imported)
+if (require.main === module) {
+  startServer().catch(console.error);
+}
+
+// Export for testing
+module.exports = app;
