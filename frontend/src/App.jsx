@@ -196,7 +196,7 @@ function App() {
                 onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
               >
                 <option value="">Choose a collection...</option>
-                {collections.map(collection => (
+                {collections && collections.map(collection => (
                   <option key={collection} value={collection}>
                     {collection}
                   </option>
