@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-config
+  namespace: universal-data-stack
+data:
+  jaeger.yaml: |
+    service:
+      name: jaeger
+      version: 1.0.0
+    sampling:
+      type: const
+      param: 1
+    reporter:
+      logSpans: true
+      localAgentHostPort: jaeger-agent:14268
+    headers:
+      jaegerDebugHeader: debug-id
+      jaegerBaggageHeader: baggage
+      traceContextHeaderName: uber-trace-id
+      traceBaggageHeaderPrefix: uberctx-
+    baggage_restrictions:
+      denyBaggageOnInitializationFailure: false
+      hostPort: ""
+      refreshInterval: 60s
+    throttler:
+      hostPort: ""
+      refreshInterval: 60s
+    metrics:
+      backend: prometheus
+      prometheus:
+        namespace: jaeger
+    tracing:
+      sampler:
+        type: const
+        param: 1
+      reporter:
+        logSpans: true
+        localAgentHostPort: jaeger-agent:14268
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: universal-data-stack
+  labels:
+    app: jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+      - name: jaeger
+        image: jaegertracing/all-in-one:1.50
+        ports:
+        - containerPort: 16686
+          name: ui
+        - containerPort: 14268
+          name: http
+        - containerPort: 14250
+          name: grpc
+        env:
+        - name: COLLECTOR_OTLP_ENABLED
+          value: "true"
+        - name: COLLECTOR_OTLP_GRPC_HOST_PORT
+          value: "0.0.0.0:4317"
+        - name: COLLECTOR_OTLP_HTTP_HOST_PORT
+          value: "0.0.0.0:4318"
+        - name: SPAN_STORAGE_TYPE
+          value: "elasticsearch"
+        - name: ES_SERVER_URLS
+          value: "http://elasticsearch-coordinating-only:9200"
+        - name: ES_INDEX_PREFIX
+          value: "jaeger"
+        - name: ES_TAGS_AS_FIELDS_ALL
+          value: "true"
+        - name: LOG_LEVEL
+          value: "info"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 14269
+          initialDelaySeconds: 5
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 14269
+          initialDelaySeconds: 1
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: universal-data-stack
+  labels:
+    app: jaeger
+spec:
+  type: ClusterIP
+  ports:
+  - name: ui
+    port: 16686
+    targetPort: 16686
+    protocol: TCP
+  - name: http
+    port: 14268
+    targetPort: 14268
+    protocol: TCP
+  - name: grpc
+    port: 14250
+    targetPort: 14250
+    protocol: TCP
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+    protocol: TCP
+  - name: otlp-http
+    port: 4318
+    targetPort: 4318
+    protocol: TCP
+  selector:
+    app: jaeger
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jaeger-ingress
+  namespace: universal-data-stack
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - jaeger.universaldata.local
+    secretName: jaeger-tls
+  rules:
+  - host: jaeger.universaldata.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: jaeger
+            port:
+              number: 16686

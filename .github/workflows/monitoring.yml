@@ -1,0 +1,306 @@
+name: Monitoring and Observability
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to monitor'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  # Health Check
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        else
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+        fi
+        export KUBECONFIG=kubeconfig
+
+    - name: Check pod status
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl get pods -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }}
+        kubectl get services -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }}
+
+    - name: Check application health
+      run: |
+        export KUBECONFIG=kubeconfig
+        # Get service endpoints
+        API_URL=$(kubectl get service universal-data-stack-api-gateway -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        if [ -z "$API_URL" ]; then
+          API_URL=$(kubectl get service universal-data-stack-api-gateway -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }} -o jsonpath='{.spec.clusterIP}')
+        fi
+        
+        # Health check
+        curl -f http://$API_URL/health || exit 1
+        curl -f http://$API_URL/api/health || exit 1
+
+  # Performance Monitoring
+  performance-monitoring:
+    name: Performance Monitoring
+    runs-on: ubuntu-latest
+    needs: health-check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        else
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+        fi
+        export KUBECONFIG=kubeconfig
+
+    - name: Check resource usage
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl top pods -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }}
+        kubectl top nodes
+
+    - name: Check HPA status
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl get hpa -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }}
+
+    - name: Check pod resource limits
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl describe pods -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }} | grep -A 5 "Limits:"
+
+  # Log Analysis
+  log-analysis:
+    name: Log Analysis
+    runs-on: ubuntu-latest
+    needs: health-check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        else
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+        fi
+        export KUBECONFIG=kubeconfig
+
+    - name: Check for errors in logs
+      run: |
+        export KUBECONFIG=kubeconfig
+        # Get logs from all pods and check for errors
+        kubectl logs -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }} --all-containers=true --since=1h | grep -i error | head -20
+
+    - name: Check for warnings in logs
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl logs -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }} --all-containers=true --since=1h | grep -i warning | head -20
+
+  # Security Monitoring
+  security-monitoring:
+    name: Security Monitoring
+    runs-on: ubuntu-latest
+    needs: health-check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        else
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+        fi
+        export KUBECONFIG=kubeconfig
+
+    - name: Check for security events
+      run: |
+        export KUBECONFIG=kubeconfig
+        # Check for security-related events
+        kubectl get events -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }} --field-selector type=Warning | grep -i security
+
+    - name: Check network policies
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl get networkpolicies -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }}
+
+    - name: Check pod security
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl get pods -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }} -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.securityContext}{"\n"}{end}'
+
+  # Database Monitoring
+  database-monitoring:
+    name: Database Monitoring
+    runs-on: ubuntu-latest
+    needs: health-check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        else
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+        fi
+        export KUBECONFIG=kubeconfig
+
+    - name: Check MongoDB status
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl exec -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }} deployment/mongodb -- mongosh --eval "db.runCommand({ping: 1})"
+
+    - name: Check Redis status
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl exec -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }} deployment/redis-master -- redis-cli ping
+
+    - name: Check Elasticsearch status
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl exec -n universal-data-stack${{ github.event.inputs.environment == 'staging' && '-staging' || '' }} deployment/elasticsearch-master -- curl -X GET "localhost:9200/_cluster/health"
+
+  # Alerting
+  alerting:
+    name: Alerting
+    runs-on: ubuntu-latest
+    needs: [health-check, performance-monitoring, log-analysis, security-monitoring, database-monitoring]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        else
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+        fi
+        export KUBECONFIG=kubeconfig
+
+    - name: Check Prometheus alerts
+      run: |
+        export KUBECONFIG=kubeconfig
+        # Check if Prometheus is running and has alerts
+        kubectl get pods -n monitoring | grep prometheus
+        # kubectl port-forward -n monitoring svc/prometheus-server 9090:80 &
+        # sleep 10
+        # curl -s http://localhost:9090/api/v1/alerts | jq '.data.alerts[] | select(.state == "firing")'
+
+    - name: Send alerts to Slack
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#alerts'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+
+  # Generate Report
+  generate-report:
+    name: Generate Monitoring Report
+    runs-on: ubuntu-latest
+    needs: [health-check, performance-monitoring, log-analysis, security-monitoring, database-monitoring]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Generate monitoring report
+      run: |
+        echo "# Monitoring Report" > monitoring-report.md
+        echo "Generated: $(date)" >> monitoring-report.md
+        echo "" >> monitoring-report.md
+        echo "## Health Check" >> monitoring-report.md
+        echo "- Status: ${{ needs.health-check.result }}" >> monitoring-report.md
+        echo "" >> monitoring-report.md
+        echo "## Performance Monitoring" >> monitoring-report.md
+        echo "- Status: ${{ needs.performance-monitoring.result }}" >> monitoring-report.md
+        echo "" >> monitoring-report.md
+        echo "## Log Analysis" >> monitoring-report.md
+        echo "- Status: ${{ needs.log-analysis.result }}" >> monitoring-report.md
+        echo "" >> monitoring-report.md
+        echo "## Security Monitoring" >> monitoring-report.md
+        echo "- Status: ${{ needs.security-monitoring.result }}" >> monitoring-report.md
+        echo "" >> monitoring-report.md
+        echo "## Database Monitoring" >> monitoring-report.md
+        echo "- Status: ${{ needs.database-monitoring.result }}" >> monitoring-report.md
+
+    - name: Upload monitoring report
+      uses: actions/upload-artifact@v3
+      with:
+        name: monitoring-report
+        path: monitoring-report.md
+
+    - name: Comment PR with monitoring report
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('monitoring-report.md', 'utf8');
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## Monitoring Report\n\n${report}`
+          });

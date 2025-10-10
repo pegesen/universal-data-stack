@@ -1,0 +1,190 @@
+module.exports = {
+  env: {
+    browser: true,
+    es2021: true,
+    node: true,
+    jest: true,
+  },
+  extends: [
+    'eslint:recommended',
+    '@typescript-eslint/recommended',
+    'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
+  ],
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaFeatures: {
+      jsx: true,
+    },
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+    project: './tsconfig.json',
+  },
+  plugins: [
+    'react',
+    'react-hooks',
+    '@typescript-eslint',
+  ],
+  rules: {
+    // TypeScript specific rules
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    '@typescript-eslint/explicit-function-return-type': 'warn',
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/prefer-nullish-coalescing': 'error',
+    '@typescript-eslint/prefer-optional-chain': 'error',
+    '@typescript-eslint/no-floating-promises': 'error',
+    '@typescript-eslint/await-thenable': 'error',
+    '@typescript-eslint/no-misused-promises': 'error',
+    
+    // React specific rules
+    'react/react-in-jsx-scope': 'off', // Not needed with React 17+
+    'react/prop-types': 'off', // Using TypeScript for prop validation
+    'react/jsx-uses-react': 'off', // Not needed with React 17+
+    'react/jsx-uses-vars': 'error',
+    'react/jsx-key': 'error',
+    'react/jsx-no-duplicate-props': 'error',
+    'react/jsx-no-undef': 'error',
+    'react/jsx-no-bind': 'warn',
+    'react/jsx-pascal-case': 'error',
+    'react/jsx-sort-props': ['warn', {
+      'callbacksLast': true,
+      'shorthandFirst': true,
+      'noSortAlphabetically': false,
+      'reservedFirst': true,
+    }],
+    'react/no-children-prop': 'error',
+    'react/no-danger-with-children': 'error',
+    'react/no-deprecated': 'error',
+    'react/no-direct-mutation-state': 'error',
+    'react/no-find-dom-node': 'error',
+    'react/no-is-mounted': 'error',
+    'react/no-render-return-value': 'error',
+    'react/no-string-refs': 'error',
+    'react/no-unescaped-entities': 'error',
+    'react/no-unknown-property': 'error',
+    'react/no-unsafe': 'error',
+    'react/require-render-return': 'error',
+    'react/self-closing-comp': 'error',
+    'react/sort-comp': 'warn',
+    'react/sort-prop-types': 'warn',
+    
+    // React Hooks rules
+    'react-hooks/rules-of-hooks': 'error',
+    'react-hooks/exhaustive-deps': 'warn',
+    
+    // General rules
+    'indent': ['error', 2],
+    'quotes': ['error', 'single'],
+    'semi': ['error', 'always'],
+    'no-console': 'warn',
+    'no-debugger': 'error',
+    'prefer-const': 'error',
+    'no-var': 'error',
+    'object-shorthand': 'error',
+    'prefer-template': 'error',
+    'template-curly-spacing': 'error',
+    'arrow-spacing': 'error',
+    'no-duplicate-imports': 'error',
+    'no-useless-rename': 'error',
+    'prefer-destructuring': ['error', {
+      'array': true,
+      'object': true
+    }, {
+      'enforceForRenamedProperties': false
+    }],
+    
+    // Code quality rules
+    'complexity': ['warn', 10],
+    'max-depth': ['warn', 4],
+    'max-lines': ['warn', 300],
+    'max-lines-per-function': ['warn', 50],
+    'max-params': ['warn', 5],
+    'no-magic-numbers': ['warn', {
+      'ignore': [0, 1, -1],
+      'ignoreArrayIndexes': true,
+      'enforceConst': true,
+      'detectObjects': false
+    }],
+    'no-nested-ternary': 'error',
+    'no-unneeded-ternary': 'error',
+    'prefer-arrow-callback': 'error',
+    'prefer-const': 'error',
+    'prefer-rest-params': 'error',
+    'prefer-spread': 'error',
+    
+    // Security rules
+    'no-eval': 'error',
+    'no-implied-eval': 'error',
+    'no-new-func': 'error',
+    'no-script-url': 'error',
+    
+    // Best practices
+    'array-callback-return': 'error',
+    'consistent-return': 'error',
+    'default-case': 'error',
+    'dot-notation': 'error',
+    'eqeqeq': ['error', 'always'],
+    'no-alert': 'error',
+    'no-caller': 'error',
+    'no-else-return': 'error',
+    'no-empty-function': 'error',
+    'no-eq-null': 'error',
+    'no-extend-native': 'error',
+    'no-extra-bind': 'error',
+    'no-fallthrough': 'error',
+    'no-floating-decimal': 'error',
+    'no-implicit-coercion': 'error',
+    'no-implicit-globals': 'error',
+    'no-iterator': 'error',
+    'no-labels': 'error',
+    'no-lone-blocks': 'error',
+    'no-loop-func': 'error',
+    'no-multi-spaces': 'error',
+    'no-multi-str': 'error',
+    'no-new': 'error',
+    'no-new-wrappers': 'error',
+    'no-octal-escape': 'error',
+    'no-param-reassign': 'error',
+    'no-proto': 'error',
+    'no-return-assign': 'error',
+    'no-return-await': 'error',
+    'no-self-compare': 'error',
+    'no-sequences': 'error',
+    'no-throw-literal': 'error',
+    'no-unmodified-loop-condition': 'error',
+    'no-unused-expressions': 'error',
+    'no-useless-call': 'error',
+    'no-useless-concat': 'error',
+    'no-useless-return': 'error',
+    'no-void': 'error',
+    'no-with': 'error',
+    'prefer-promise-reject-errors': 'error',
+    'radix': 'error',
+    'require-await': 'error',
+    'vars-on-top': 'error',
+    'wrap-iife': 'error',
+    'yoda': 'error',
+  },
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
+  overrides: [
+    {
+      files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'off',
+        'no-magic-numbers': 'off',
+        'max-lines-per-function': 'off',
+        'react/jsx-no-bind': 'off',
+      },
+    },
+  ],
+  ignorePatterns: [
+    'dist/',
+    'node_modules/',
+    '*.js',
+    'coverage/',
+  ],
+};

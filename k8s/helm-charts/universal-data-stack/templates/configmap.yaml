@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "universal-data-stack.fullname" . }}-config
+  labels:
+    {{- include "universal-data-stack.labels" . | nindent 4 }}
+data:
+  {{- if .Values.configMaps.create }}
+  {{- range $key, $value := .Values.configMaps.data }}
+  {{ $key }}: |
+    {{- $value | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  app-config.json: |
+    {
+      "api": {
+        "port": 3000,
+        "cors": {
+          "origin": "{{ .Values.env.CORS_ORIGIN | default "*" }}",
+          "credentials": {{ .Values.env.CORS_CREDENTIALS | default "true" }}
+        }
+      },
+      "rateLimit": {
+        "windowMs": {{ .Values.env.RATE_LIMIT_WINDOW_MS | default "900000" }},
+        "max": {{ .Values.env.RATE_LIMIT_MAX_REQUESTS | default "100" }}
+      },
+      "consul": {
+        "host": "{{ .Values.env.CONSUL_HOST | default "consul-server" }}",
+        "port": {{ .Values.env.CONSUL_PORT | default "8500" }}
+      },
+      "redis": {
+        "host": "{{ .Values.env.REDIS_HOST | default "redis-master" }}",
+        "port": {{ .Values.env.REDIS_PORT | default "6379" }}
+      },
+      "mongodb": {
+        "uri": "{{ .Values.env.MONGODB_URI }}"
+      },
+      "elasticsearch": {
+        "url": "{{ .Values.env.ELASTICSEARCH_URL }}"
+      }
+    }
+  nginx.conf: |
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log;
+    pid /run/nginx.pid;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log /var/log/nginx/access.log main;
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types
+            text/plain
+            text/css
+            text/xml
+            text/javascript
+            application/json
+            application/javascript
+            application/xml+rss
+            application/atom+xml
+            image/svg+xml;
+
+        upstream api_gateway {
+            server {{ include "universal-data-stack.fullname" . }}-api-gateway:{{ .Values.apiGateway.service.port | default .Values.service.port }};
+        }
+
+        server {
+            listen 80;
+            server_name _;
+
+            location / {
+                proxy_pass http://api_gateway;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            location /health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+        }
+    }

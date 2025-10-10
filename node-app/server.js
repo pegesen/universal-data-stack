@@ -11,13 +11,37 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Security Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
 
 // Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests from this IP, please try again later.',
+    retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000) / 1000)
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
@@ -26,8 +50,11 @@ app.use(morgan('combined'));
 
 // CORS Configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true
+  origin: process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:8080',
+  credentials: process.env.CORS_CREDENTIALS === 'true' || true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset']
 }));
 
 // Body parsing
@@ -37,7 +64,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // MongoDB Connection
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://admin:password123@localhost:27017/universal_data?authSource=admin');
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://admin:password123@localhost:27017/universal_data?authSource=admin';
+    const options = {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      ssl: process.env.MONGODB_SSL === 'true',
+      authSource: process.env.MONGODB_AUTH_SOURCE || 'admin',
+      retryWrites: true,
+      w: 'majority'
+    };
+    
+    await mongoose.connect(mongoUri, options);
     logger.info('✅ MongoDB connected successfully');
   } catch (error) {
     logger.error('❌ MongoDB connection error:', error);
@@ -131,15 +168,26 @@ app.get('/api/:collection', async (req, res) => {
     const { collection } = req.params;
     const { page = 1, limit = 100, sort = '_id', order = 'desc' } = req.query;
     
-    const Model = getCollectionModel(collection);
-    const skip = (page - 1) * limit;
+    // Validate pagination parameters
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(1000, Math.max(1, parseInt(limit)));
     const sortOrder = order === 'desc' ? -1 : 1;
+    
+    const Model = getCollectionModel(collection);
+    const skip = (pageNum - 1) * limitNum;
+    
+    logger.info(`Fetching documents from collection: ${collection}`, {
+      page: pageNum,
+      limit: limitNum,
+      sort,
+      order
+    });
     
     const documents = await Model
       .find({})
       .sort({ [sort]: sortOrder })
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(limitNum)
       .lean();
     
     const total = await Model.countDocuments();
@@ -147,13 +195,18 @@ app.get('/api/:collection', async (req, res) => {
     res.json({
       data: documents,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
+    logger.error('Error fetching documents:', {
+      collection: req.params.collection,
+      error: error.message,
+      query: req.query
+    });
     res.status(500).json({ error: error.message });
   }
 });
@@ -168,15 +221,34 @@ app.post('/api/:collection', async (req, res) => {
       return res.status(400).json({ error: 'Document data is required' });
     }
     
+    logger.info(`Creating document in collection: ${collection}`, {
+      collection,
+      dataKeys: Object.keys(data)
+    });
+    
     const Model = getCollectionModel(collection);
     const document = new Model(data);
     const savedDocument = await document.save();
     
+    logger.info(`Document created successfully`, {
+      collection,
+      documentId: savedDocument._id
+    });
+    
     res.status(201).json(savedDocument);
   } catch (error) {
-    logger.error('Error creating document:', error);
+    logger.error('Error creating document:', {
+      collection: req.params.collection,
+      error: error.message,
+      stack: error.stack
+    });
+    
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ error: 'Validation error', details: error.message });
+      return res.status(400).json({ 
+        error: 'Validation error', 
+        details: error.message,
+        field: error.path
+      });
     }
     res.status(500).json({ error: error.message });
   }
@@ -257,11 +329,23 @@ app.get('/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use((error, req, res) => {
-  logger.error('Error:', error);
+app.use((error, req, res, next) => {
+  logger.error('Unhandled Error:', {
+    error: error.message,
+    stack: error.stack,
+    url: req.url,
+    method: req.method,
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+  
+  // Don't leak error details in production
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
   res.status(500).json({ 
     error: 'Internal server error',
-    message: error.message 
+    message: isDevelopment ? error.message : 'Something went wrong',
+    ...(isDevelopment && { stack: error.stack })
   });
 });
 

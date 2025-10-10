@@ -1,0 +1,428 @@
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Image configuration
+image:
+  registry: "docker.io"
+  repository: "universaldata"
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: api.universaldata.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: universal-data-stack-tls
+      hosts:
+        - api.universaldata.local
+
+# API Gateway configuration
+apiGateway:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: "universaldata/api-gateway"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Auth Service configuration
+authService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: "universaldata/auth-service"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  resources:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 150m
+      memory: 128Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+# Data Service configuration
+dataService:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: "universaldata/data-service"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  resources:
+    limits:
+      cpu: 400m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+
+# Search Service configuration
+searchService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: "universaldata/search-service"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  resources:
+    limits:
+      cpu: 300m
+      memory: 512Mi
+    requests:
+      cpu: 150m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+# Notification Service configuration
+notificationService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: "universaldata/notification-service"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+
+# Analytics Service configuration
+analyticsService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: "universaldata/analytics-service"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  resources:
+    limits:
+      cpu: 400m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+# Event Bus configuration
+eventBus:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: "universaldata/event-bus"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  resources:
+    limits:
+      cpu: 300m
+      memory: 512Mi
+    requests:
+      cpu: 150m
+      memory: 256Mi
+
+# MongoDB configuration
+mongodb:
+  enabled: true
+  auth:
+    enabled: true
+    rootPassword: "rootpassword"
+    username: "admin"
+    password: "password123"
+    database: "universal_data"
+  architecture: replicaset
+  replicaCount: 3
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+# Elasticsearch configuration
+elasticsearch:
+  enabled: true
+  master:
+    replicaCount: 3
+    persistence:
+      enabled: true
+      size: 10Gi
+  data:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 20Gi
+  coordinating:
+    replicaCount: 2
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+# Redis configuration
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    enabled: true
+    password: "redispassword"
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 5Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Consul configuration
+consul:
+  enabled: true
+  global:
+    datacenter: "dc1"
+    domain: "consul"
+  server:
+    replicas: 3
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+  ui:
+    enabled: true
+    service:
+      type: ClusterIP
+
+# Monitoring configuration
+monitoring:
+  prometheus:
+    enabled: true
+    server:
+      persistentVolume:
+        enabled: true
+        size: 20Gi
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+  grafana:
+    enabled: true
+    adminPassword: "adminpassword"
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+  jaeger:
+    enabled: true
+    collector:
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+
+# Security configuration
+security:
+  podSecurityPolicy:
+    enabled: false
+  networkPolicy:
+    enabled: true
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+
+# Environment variables
+env:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  JWT_SECRET: "your-super-secret-jwt-key"
+  SESSION_SECRET: "your-super-secret-session-key"
+  MONGODB_URI: "mongodb://admin:password123@mongodb:27017/universal_data?authSource=admin"
+  REDIS_URL: "redis://:redispassword@redis-master:6379"
+  ELASTICSEARCH_URL: "http://elasticsearch-coordinating-only:9200"
+  CONSUL_URL: "http://consul-server:8500"
+
+# Secrets configuration
+secrets:
+  create: true
+  data:
+    jwt-secret: "your-super-secret-jwt-key"
+    session-secret: "your-super-secret-session-key"
+    mongodb-password: "password123"
+    redis-password: "redispassword"
+
+# ConfigMaps configuration
+configMaps:
+  create: true
+  data:
+    app-config: |
+      {
+        "api": {
+          "port": 3000,
+          "cors": {
+            "origin": "*",
+            "credentials": true
+          }
+        },
+        "rateLimit": {
+          "windowMs": 900000,
+          "max": 100
+        }
+      }
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Horizontal Pod Autoscaler
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Network Policies
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: "universal-data-stack"
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+
+# Service Mesh (Istio)
+istio:
+  enabled: false
+  virtualService:
+    enabled: false
+  destinationRule:
+    enabled: false
+  gateway:
+    enabled: false
