@@ -67,13 +67,28 @@ const sanitizeInput = (data) => {
     return data;
   }
   
-  // Remove potentially dangerous fields
+  // Remove potentially dangerous fields (recursively)
   const dangerousFields = ['__proto__', 'constructor', 'prototype'];
-  const sanitized = { ...data };
   
-  dangerousFields.forEach(field => {
-    delete sanitized[field];
-  });
+  // Handle arrays
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeInput(item));
+  }
+  
+  // Handle objects
+  const sanitized = {};
+  
+  for (const key in data) {
+    // Skip dangerous fields
+    if (dangerousFields.includes(key)) {
+      continue;
+    }
+    
+    // Recursively sanitize nested objects
+    if (data.hasOwnProperty(key)) {
+      sanitized[key] = sanitizeInput(data[key]);
+    }
+  }
   
   return sanitized;
 };
@@ -131,14 +146,16 @@ app.get('/api/:collection', async (req, res) => {
     const { page = 1, limit = 100, sort = '_id', order = 'desc' } = req.query;
     
     const Model = getCollectionModel(collection);
-    const skip = (page - 1) * limit;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
     const sortOrder = order === 'desc' ? -1 : 1;
     
     const documents = await Model
       .find({})
       .sort({ [sort]: sortOrder })
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(limitNum)
       .lean();
     
     const total = await Model.countDocuments();
@@ -146,10 +163,10 @@ app.get('/api/:collection', async (req, res) => {
     res.json({
       data: documents,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
@@ -255,18 +272,24 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Error handling middleware
-app.use((error, req, res, next) => {
-  console.error('Error:', error);
-  res.status(500).json({ 
-    error: 'Internal server error',
-    message: error.message 
-  });
-});
-
-// 404 handler
+// 404 handler - must come before error handler
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
+});
+
+// Error handling middleware - must be last
+app.use((error, req, res, next) => {
+  console.error('Error:', error);
+  
+  // Check if headers were already sent
+  if (res.headersSent) {
+    return next(error);
+  }
+  
+  res.status(error.status || 500).json({ 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'production' ? 'An error occurred' : error.message 
+  });
 });
 
 // Start server
