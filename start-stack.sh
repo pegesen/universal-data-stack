@@ -5,6 +5,14 @@
 
 echo "🚀 Starting Universal Data Stack..."
 
+# Load environment variables
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+    echo "✅ Environment variables loaded from .env"
+else
+    echo "⚠️  No .env file found, using defaults"
+fi
+
 # Farben für bessere Ausgabe
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -35,9 +43,9 @@ echo -e "${YELLOW}🍃 Starting MongoDB...${NC}"
 sudo docker run -d --name universal-mongo \
     --network universal-network \
     -p 27017:27017 \
-    -e MONGO_INITDB_ROOT_USERNAME=admin \
-    -e MONGO_INITDB_ROOT_PASSWORD=password123 \
-    -e MONGO_INITDB_DATABASE=universal_data \
+    -e MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME:-admin} \
+    -e MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-password123} \
+    -e MONGO_INITDB_DATABASE=${MONGO_DATABASE:-universal_data} \
     mongo:7.0 2>/dev/null || echo "MongoDB already running"
 
 # Warten bis MongoDB bereit ist
@@ -57,9 +65,9 @@ echo -e "${YELLOW}⚙️ Starting Backend API...${NC}"
 sudo docker run -d --name universal-node-app \
     --network universal-network \
     -p 3000:3000 \
-    -e NODE_ENV=development \
-    -e MONGODB_URI=mongodb://admin:password123@universal-mongo:27017/universal_data?authSource=admin \
-    -e FRONTEND_URL=http://localhost:8080 \
+    -e NODE_ENV=${NODE_ENV:-development} \
+    -e MONGODB_URI=mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password123}@universal-mongo:27017/${MONGO_DATABASE:-universal_data}?authSource=admin \
+    -e FRONTEND_URL=${FRONTEND_URL:-http://localhost:8080} \
     universal-data-stack-api 2>/dev/null || echo "Backend already running"
 
 # Frontend Image bauen falls nicht vorhanden
@@ -75,7 +83,7 @@ echo -e "${YELLOW}🎨 Starting Frontend...${NC}"
 sudo docker run -d --name universal-frontend \
     --network universal-network \
     -p 8080:8080 \
-    -e VITE_API_URL=http://localhost:3000 \
+    -e VITE_API_URL=${VITE_API_URL:-http://localhost:3000} \
     universal-data-stack-frontend 2>/dev/null || echo "Frontend already running"
 
 # Mongo Express starten
@@ -83,11 +91,11 @@ echo -e "${YELLOW}🔍 Starting Mongo Express...${NC}"
 sudo docker run -d --name universal-mongo-express \
     --network universal-network \
     -p 8081:8081 \
-    -e ME_CONFIG_MONGODB_ADMINUSERNAME=admin \
-    -e ME_CONFIG_MONGODB_ADMINPASSWORD=password123 \
-    -e ME_CONFIG_MONGODB_URL=mongodb://admin:password123@universal-mongo:27017/ \
-    -e ME_CONFIG_BASICAUTH_USERNAME=admin \
-    -e ME_CONFIG_BASICAUTH_PASSWORD=admin123 \
+    -e ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USERNAME:-admin} \
+    -e ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD:-password123} \
+    -e ME_CONFIG_MONGODB_URL=mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password123}@universal-mongo:27017/ \
+    -e ME_CONFIG_BASICAUTH_USERNAME=${MONGO_EXPRESS_USER:-admin} \
+    -e ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASS:-admin123} \
     mongo-express:1.0.2 2>/dev/null || echo "Mongo Express already running"
 
 # Warten bis alle Services bereit sind
@@ -104,7 +112,7 @@ echo -e "${BLUE}🌐 Access URLs:${NC}"
 echo -e "   Frontend:     ${GREEN}http://localhost:8080${NC}"
 echo -e "   API:          ${GREEN}http://localhost:3000${NC}"
 echo -e "   Health Check: ${GREEN}http://localhost:3000/health${NC}"
-echo -e "   Mongo Express: ${GREEN}http://localhost:8081${NC} (admin/admin123)"
+echo -e "   Mongo Express: ${GREEN}http://localhost:8081${NC} (${MONGO_EXPRESS_USER:-admin}/${MONGO_EXPRESS_PASS:-admin123})"
 echo ""
 echo -e "${YELLOW}💡 To stop the stack, run: ./stop-stack.sh${NC}"
 echo -e "${YELLOW}💡 To view logs, run: ./logs-stack.sh${NC}"

@@ -1,142 +1,142 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 function App() {
-  const [collections, setCollections] = useState([])
-  const [currentCollection, setCurrentCollection] = useState('')
-  const [documents, setDocuments] = useState([])
-  const [jsonInput, setJsonInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [collections, setCollections] = useState([]);
+  const [currentCollection, setCurrentCollection] = useState('');
+  const [documents, setDocuments] = useState([]);
+  const [jsonInput, setJsonInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const loadCollections = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/collections`);
+      setCollections(response.data.collections);
+    } catch (err) {
+      setError('Failed to load collections: ' + err.message);
+    }
+  };
+
+  const loadDocuments = useCallback(async () => {
+    if (!currentCollection) return;
+    
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/${currentCollection}`);
+      setDocuments(response.data.data || []);
+      setError('');
+    } catch (err) {
+      setError('Failed to load documents: ' + err.message);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentCollection]);
 
   // Load collections on mount
   useEffect(() => {
-    loadCollections()
-  }, [])
+    loadCollections();
+  }, []);
 
   // Load documents when collection changes
   useEffect(() => {
     if (currentCollection) {
-      loadDocuments()
+      loadDocuments();
     }
-  }, [currentCollection])
-
-  const loadCollections = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/collections`)
-      setCollections(response.data.collections)
-    } catch (err) {
-      setError('Failed to load collections: ' + err.message)
-    }
-  }
-
-  const loadDocuments = async () => {
-    if (!currentCollection) return
-    
-    setLoading(true)
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/${currentCollection}`)
-      setDocuments(response.data.data || [])
-      setError('')
-    } catch (err) {
-      setError('Failed to load documents: ' + err.message)
-      setDocuments([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [currentCollection, loadDocuments]);
 
   const handleCollectionChange = (e) => {
-    const value = e.target.value
-    setCurrentCollection(value)
-    setJsonInput('')
-    setError('')
-    setSuccess('')
-  }
+    const value = e.target.value;
+    setCurrentCollection(value);
+    setJsonInput('');
+    setError('');
+    setSuccess('');
+  };
 
   const handleJsonInputChange = (e) => {
-    setJsonInput(e.target.value)
-    setError('')
-  }
+    setJsonInput(e.target.value);
+    setError('');
+  };
 
   const validateJson = (jsonString) => {
     if (!jsonString.trim()) {
-      throw new Error('JSON input cannot be empty')
+      throw new Error('JSON input cannot be empty');
     }
     
     try {
-      const parsed = JSON.parse(jsonString)
+      const parsed = JSON.parse(jsonString);
       
       // Basic validation
       if (typeof parsed !== 'object' || parsed === null) {
-        throw new Error('JSON must be an object')
+        throw new Error('JSON must be an object');
       }
       
       // Check for dangerous properties
-      const dangerousProps = ['__proto__', 'constructor', 'prototype']
+      const dangerousProps = ['__proto__', 'constructor', 'prototype'];
       for (const prop of dangerousProps) {
         if (prop in parsed) {
-          throw new Error(`Property '${prop}' is not allowed`)
+          throw new Error(`Property '${prop}' is not allowed`);
         }
       }
       
-      return parsed
+      return parsed;
     } catch (err) {
       if (err instanceof SyntaxError) {
-        throw new Error('Invalid JSON format')
+        throw new Error('Invalid JSON format');
       }
-      throw err
+      throw err;
     }
-  }
+  };
 
   const handleSaveDocument = async () => {
     if (!currentCollection) {
-      setError('Please select a collection first')
-      return
+      setError('Please select a collection first');
+      return;
     }
 
     if (!jsonInput.trim()) {
-      setError('Please enter JSON data')
-      return
+      setError('Please enter JSON data');
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = validateJson(jsonInput)
-      await axios.post(`${API_BASE_URL}/api/${currentCollection}`, data)
-      setSuccess('Document saved successfully!')
-      setJsonInput('')
-      loadDocuments()
+      const data = validateJson(jsonInput);
+      await axios.post(`${API_BASE_URL}/api/${currentCollection}`, data);
+      setSuccess('Document saved successfully!');
+      setJsonInput('');
+      loadDocuments();
     } catch (err) {
-      setError('Failed to save document: ' + err.message)
+      setError('Failed to save document: ' + err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDeleteDocument = async (id) => {
     if (!window.confirm('Are you sure you want to delete this document?')) {
-      return
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      await axios.delete(`${API_BASE_URL}/api/${currentCollection}/${id}`)
-      setSuccess('Document deleted successfully!')
-      loadDocuments()
+      await axios.delete(`${API_BASE_URL}/api/${currentCollection}/${id}`);
+      setSuccess('Document deleted successfully!');
+      loadDocuments();
     } catch (err) {
-      setError('Failed to delete document: ' + err.message)
+      setError('Failed to delete document: ' + err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const formatDocument = (doc) => {
-    return JSON.stringify(doc, null, 2)
-  }
+    return JSON.stringify(doc, null, 2);
+  };
 
   return (
     <div style={{ 
@@ -196,7 +196,7 @@ function App() {
                 onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
               >
                 <option value="">Choose a collection...</option>
-                {collections.map(collection => (
+                {collections?.map(collection => (
                   <option key={collection} value={collection}>
                     {collection}
                   </option>
@@ -232,7 +232,7 @@ function App() {
                 fontSize: '1.1rem',
                 color: '#333'
               }}>
-                Add New Document to "{currentCollection}":
+                Add New Document to &quot;{currentCollection}&quot;:
               </label>
               <textarea
                 value={jsonInput}
@@ -269,12 +269,12 @@ function App() {
                 }}
                 onMouseOver={(e) => {
                   if (!loading && jsonInput.trim()) {
-                    e.target.style.background = '#0056b3'
+                    e.target.style.background = '#0056b3';
                   }
                 }}
                 onMouseOut={(e) => {
                   if (!loading && jsonInput.trim()) {
-                    e.target.style.background = '#007bff'
+                    e.target.style.background = '#007bff';
                   }
                 }}
               >
@@ -320,7 +320,7 @@ function App() {
                 marginBottom: '20px'
               }}>
                 <h2 style={{ color: '#333', fontSize: '1.5rem' }}>
-                  Documents in "{currentCollection}" ({documents.length})
+                  Documents in &quot;{currentCollection}&quot; ({documents.length})
                 </h2>
                 <button
                   onClick={loadDocuments}
@@ -413,7 +413,7 @@ function App() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
