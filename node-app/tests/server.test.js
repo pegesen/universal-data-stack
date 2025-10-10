@@ -1,16 +1,22 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
-const app = require('../server');
+const { app } = require('../server');
 
 describe('Universal Data Stack API', () => {
   beforeAll(async () => {
+    // Close any existing connections
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
     // Connect to test database
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://admin:password123@localhost:27017/test_data?authSource=admin');
   });
 
   afterAll(async () => {
     // Clean up
-    await mongoose.connection.db.dropDatabase();
+    if (mongoose.connection.db) {
+      await mongoose.connection.db.dropDatabase();
+    }
     await mongoose.connection.close();
   });
 

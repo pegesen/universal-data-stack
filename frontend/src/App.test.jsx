@@ -10,17 +10,25 @@ describe('App Component', () => {
   beforeEach(() => {
     // Reset mocks before each test
     vi.clearAllMocks()
+    // Default mock for collections endpoint
+    axios.get.mockResolvedValue({ data: { collections: [] } })
   })
 
-  it('renders the main title', () => {
+  it('renders the main title', async () => {
     render(<App />)
     expect(screen.getByText('Universal Data Stack')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(axios.get).toHaveBeenCalled()
+    })
   })
 
-  it('renders collection selection dropdown', () => {
+  it('renders collection selection dropdown', async () => {
     render(<App />)
     expect(screen.getByText('Select Collection:')).toBeInTheDocument()
     expect(screen.getByRole('combobox')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(axios.get).toHaveBeenCalled()
+    })
   })
 
   it('loads collections on mount', async () => {
@@ -46,31 +54,44 @@ describe('App Component', () => {
 
   it('shows JSON input when collection is selected', async () => {
     const mockCollections = ['users']
-    axios.get.mockResolvedValueOnce({ data: { collections: mockCollections } })
+    axios.get
+      .mockResolvedValueOnce({ data: { collections: mockCollections } })
+      .mockResolvedValueOnce({ data: { data: [] } })
 
     render(<App />)
 
     await waitFor(() => {
-      const select = screen.getByRole('combobox')
-      fireEvent.change(select, { target: { value: 'users' } })
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
 
-    expect(screen.getByText(/Add New Document to "users"/)).toBeInTheDocument()
-    expect(screen.getByRole('textbox')).toBeInTheDocument()
+    const select = screen.getByRole('combobox')
+    fireEvent.change(select, { target: { value: 'users' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Add New Document to "users"/)).toBeInTheDocument()
+    })
   })
 
   it('validates JSON input', async () => {
     const mockCollections = ['users']
-    axios.get.mockResolvedValueOnce({ data: { collections: mockCollections } })
+    axios.get
+      .mockResolvedValueOnce({ data: { collections: mockCollections } })
+      .mockResolvedValueOnce({ data: { data: [] } })
 
     render(<App />)
 
     await waitFor(() => {
-      const select = screen.getByRole('combobox')
-      fireEvent.change(select, { target: { value: 'users' } })
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
 
-    const textarea = screen.getByRole('textbox')
+    const select = screen.getByRole('combobox')
+    fireEvent.change(select, { target: { value: 'users' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Add New Document to "users"/)).toBeInTheDocument()
+    })
+
+    const textarea = screen.getByPlaceholderText(/John Doe/)
     const saveButton = screen.getByText('Save Document')
 
     // Test invalid JSON
@@ -89,16 +110,24 @@ describe('App Component', () => {
     axios.get
       .mockResolvedValueOnce({ data: { collections: mockCollections } })
       .mockResolvedValueOnce({ data: { data: [] } })
-      .mockResolvedValueOnce({ data: mockDocument })
+      .mockResolvedValueOnce({ data: { data: [mockDocument] } })
+    
+    axios.post.mockResolvedValueOnce({ data: mockDocument })
 
     render(<App />)
 
     await waitFor(() => {
-      const select = screen.getByRole('combobox')
-      fireEvent.change(select, { target: { value: 'users' } })
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
 
-    const textarea = screen.getByRole('textbox')
+    const select = screen.getByRole('combobox')
+    fireEvent.change(select, { target: { value: 'users' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Add New Document to "users"/)).toBeInTheDocument()
+    })
+
+    const textarea = screen.getByPlaceholderText(/John Doe/)
     const saveButton = screen.getByText('Save Document')
 
     fireEvent.change(textarea, { 
@@ -128,9 +157,11 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      const select = screen.getByRole('combobox')
-      fireEvent.change(select, { target: { value: 'users' } })
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
+
+    const select = screen.getByRole('combobox')
+    fireEvent.change(select, { target: { value: 'users' } })
 
     await waitFor(() => {
       expect(screen.getByText('Documents in "users" (2)')).toBeInTheDocument()
@@ -147,6 +178,8 @@ describe('App Component', () => {
       .mockResolvedValueOnce({ data: { collections: mockCollections } })
       .mockResolvedValueOnce({ data: { data: mockDocuments } })
       .mockResolvedValueOnce({ data: { data: [] } })
+    
+    axios.delete.mockResolvedValueOnce({ data: { message: 'Deleted' } })
 
     // Mock window.confirm
     window.confirm = vi.fn(() => true)
@@ -154,16 +187,22 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      const select = screen.getByRole('combobox')
-      fireEvent.change(select, { target: { value: 'users' } })
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
+
+    const select = screen.getByRole('combobox')
+    fireEvent.change(select, { target: { value: 'users' } })
 
     await waitFor(() => {
-      const deleteButton = screen.getByText('Delete')
-      fireEvent.click(deleteButton)
+      expect(screen.getByText('John Doe')).toBeInTheDocument()
     })
 
-    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this document?')
-    expect(axios.delete).toHaveBeenCalledWith('http://localhost:3000/api/users/1')
+    const deleteButton = screen.getByText('Delete')
+    fireEvent.click(deleteButton)
+
+    await waitFor(() => {
+      expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this document?')
+      expect(axios.delete).toHaveBeenCalledWith('http://localhost:3000/api/users/1')
+    })
   })
 })
