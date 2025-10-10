@@ -436,6 +436,7 @@ function App() {
         confirmText="Delete"
         cancelText="Cancel"
       />
+      </div>
     </ErrorBoundary>
   );
 }
