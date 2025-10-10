@@ -62,20 +62,28 @@ const validateCollectionName = (name) => {
   return name.toLowerCase();
 };
 
+// Deeply sanitize input to prevent prototype pollution and NoSQL operator injection
 const sanitizeInput = (data) => {
-  if (typeof data !== 'object' || data === null) {
-    return data;
-  }
-  
-  // Remove potentially dangerous fields
-  const dangerousFields = ['__proto__', 'constructor', 'prototype'];
-  const sanitized = { ...data };
-  
-  dangerousFields.forEach(field => {
-    delete sanitized[field];
-  });
-  
-  return sanitized;
+  const dangerousFields = new Set(['__proto__', 'constructor', 'prototype']);
+
+  const sanitizeValue = (value) => {
+    if (Array.isArray(value)) {
+      return value.map(sanitizeValue);
+    }
+    if (value && typeof value === 'object') {
+      const result = {};
+      for (const [key, val] of Object.entries(value)) {
+        // Drop dangerous keys and MongoDB operator/dotted keys
+        if (dangerousFields.has(key)) continue;
+        if (typeof key === 'string' && (key.startsWith('$') || key.includes('.'))) continue;
+        result[key] = sanitizeValue(val);
+      }
+      return result;
+    }
+    return value;
+  };
+
+  return sanitizeValue(data);
 };
 
 // Dynamic Collection Handler
@@ -130,15 +138,20 @@ app.get('/api/:collection', async (req, res) => {
     const { collection } = req.params;
     const { page = 1, limit = 100, sort = '_id', order = 'desc' } = req.query;
     
+    // Sanitize and clamp pagination/sort inputs
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 100));
+    const sortField = typeof sort === 'string' && /^[a-zA-Z0-9_]+$/.test(sort) ? sort : '_id';
+    
     const Model = getCollectionModel(collection);
-    const skip = (page - 1) * limit;
+    const skip = (pageNum - 1) * limitNum;
     const sortOrder = order === 'desc' ? -1 : 1;
     
     const documents = await Model
       .find({})
-      .sort({ [sort]: sortOrder })
+      .sort({ [sortField]: sortOrder })
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(limitNum)
       .lean();
     
     const total = await Model.countDocuments();
@@ -146,10 +159,10 @@ app.get('/api/:collection', async (req, res) => {
     res.json({
       data: documents,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
@@ -185,6 +198,9 @@ app.post('/api/:collection', async (req, res) => {
 app.get('/api/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid document ID' });
+    }
     const Model = getCollectionModel(collection);
     
     const document = await Model.findById(id);
@@ -202,6 +218,9 @@ app.get('/api/:collection/:id', async (req, res) => {
 app.put('/api/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid document ID' });
+    }
     const data = sanitizeInput(req.body);
     
     if (!data || Object.keys(data).length === 0) {
@@ -210,8 +229,8 @@ app.put('/api/:collection/:id', async (req, res) => {
     
     const Model = getCollectionModel(collection);
     const document = await Model.findByIdAndUpdate(
-      id, 
-      data, 
+      id,
+      { $set: data },
       { new: true, runValidators: true }
     );
     
@@ -233,6 +252,9 @@ app.put('/api/:collection/:id', async (req, res) => {
 app.delete('/api/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid document ID' });
+    }
     const Model = getCollectionModel(collection);
     
     const document = await Model.findByIdAndDelete(id);
@@ -269,7 +291,7 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Start server
+// Start server only when run directly, export app for testing
 const startServer = async () => {
   await connectDB();
   app.listen(PORT, '0.0.0.0', () => {
@@ -279,4 +301,8 @@ const startServer = async () => {
   });
 };
 
-startServer().catch(console.error);
+if (require.main === module) {
+  startServer().catch(console.error);
+}
+
+module.exports = app;
