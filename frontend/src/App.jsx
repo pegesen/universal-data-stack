@@ -20,7 +20,35 @@ function App() {
   // Load documents when collection changes
   useEffect(() => {
     if (currentCollection) {
-      loadDocuments()
+      // AbortController für Race Condition Prevention
+      const abortController = new AbortController()
+      
+      const loadDocumentsWithAbort = async () => {
+        if (!currentCollection) return
+        
+        setLoading(true)
+        try {
+          const response = await axios.get(`${API_BASE_URL}/api/${currentCollection}`, {
+            signal: abortController.signal
+          })
+          setDocuments(response.data.data || [])
+          setError('')
+        } catch (err) {
+          if (err.name !== 'CanceledError') {
+            setError('Failed to load documents: ' + err.message)
+            setDocuments([])
+          }
+        } finally {
+          setLoading(false)
+        }
+      }
+      
+      loadDocumentsWithAbort()
+      
+      // Cleanup function to abort request if component unmounts or collection changes
+      return () => {
+        abortController.abort()
+      }
     }
   }, [currentCollection])
 
@@ -33,17 +61,21 @@ function App() {
     }
   }
 
-  const loadDocuments = async () => {
+  const loadDocuments = async (signal = null) => {
     if (!currentCollection) return
     
     setLoading(true)
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/${currentCollection}`)
+      const response = await axios.get(`${API_BASE_URL}/api/${currentCollection}`, {
+        signal: signal
+      })
       setDocuments(response.data.data || [])
       setError('')
     } catch (err) {
-      setError('Failed to load documents: ' + err.message)
-      setDocuments([])
+      if (err.name !== 'CanceledError') {
+        setError('Failed to load documents: ' + err.message)
+        setDocuments([])
+      }
     } finally {
       setLoading(false)
     }
@@ -109,7 +141,8 @@ function App() {
       await axios.post(`${API_BASE_URL}/api/${currentCollection}`, data)
       setSuccess('Document saved successfully!')
       setJsonInput('')
-      loadDocuments()
+      // Reload documents after successful save
+      await loadDocuments()
     } catch (err) {
       setError('Failed to save document: ' + err.message)
     } finally {
@@ -126,7 +159,8 @@ function App() {
     try {
       await axios.delete(`${API_BASE_URL}/api/${currentCollection}/${id}`)
       setSuccess('Document deleted successfully!')
-      loadDocuments()
+      // Reload documents after successful deletion
+      await loadDocuments()
     } catch (err) {
       setError('Failed to delete document: ' + err.message)
     } finally {
@@ -204,20 +238,29 @@ function App() {
               </select>
               <button
                 onClick={loadCollections}
+                disabled={loading}
                 style={{
                   padding: '12px 20px',
-                  background: '#28a745',
+                  background: loading ? '#ccc' : '#28a745',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor: loading ? 'not-allowed' : 'pointer',
                   fontWeight: '600',
                   transition: 'background 0.2s'
                 }}
-                onMouseOver={(e) => e.target.style.background = '#218838'}
-                onMouseOut={(e) => e.target.style.background = '#28a745'}
+                onMouseOver={(e) => {
+                  if (!loading) {
+                    e.target.style.background = '#218838'
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!loading) {
+                    e.target.style.background = '#28a745'
+                  }
+                }}
               >
-                Refresh
+                {loading ? 'Loading...' : 'Refresh'}
               </button>
             </div>
           </div>
@@ -323,7 +366,7 @@ function App() {
                   Documents in "{currentCollection}" ({documents.length})
                 </h2>
                 <button
-                  onClick={loadDocuments}
+                  onClick={() => loadDocuments()}
                   disabled={loading}
                   style={{
                     padding: '8px 16px',

@@ -5,7 +5,9 @@ const app = require('../server');
 describe('Universal Data Stack API', () => {
   beforeAll(async () => {
     // Connect to test database
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://admin:password123@localhost:27017/test_data?authSource=admin');
+    const mongoPassword = process.env.MONGO_PASSWORD || 'CHANGE_ME_IN_PRODUCTION';
+    const mongoUri = process.env.MONGODB_URI || `mongodb://admin:${mongoPassword}@localhost:27017/test_data?authSource=admin`;
+    await mongoose.connect(mongoUri);
   });
 
   afterAll(async () => {
