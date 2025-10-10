@@ -1,21 +1,34 @@
-import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useCallback } from 'react';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingSpinner from './components/LoadingSpinner';
 import ConfirmDialog from './components/ConfirmDialog';
+import { useCollections, useDocuments, useCreateDocument, useDeleteDocument } from './hooks/useApi';
+import ValidationService from './utils/validation';
+import { 
+  Document, 
+  CollectionChangeHandler, 
+  JsonInputChangeHandler, 
+  DocumentDeleteHandler,
+  ConfirmDeleteHandler,
+  CancelDeleteHandler 
+} from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+function App(): React.JSX.Element {
+  const [collections, setCollections] = useState<string[]>([]);
+  const [currentCollection, setCurrentCollection] = useState<string>('');
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [jsonInput, setJsonInput] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
+  const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
 
-function App() {
-  const [collections, setCollections] = useState([]);
-  const [currentCollection, setCurrentCollection] = useState('');
-  const [documents, setDocuments] = useState([]);
-  const [jsonInput, setJsonInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [documentToDelete, setDocumentToDelete] = useState(null);
+  // API hooks
+  const collectionsApi = useCollections();
+  const documentsApi = useDocuments(currentCollection);
+  const createDocumentApi = useCreateDocument(currentCollection);
+  const deleteDocumentApi = useDeleteDocument(currentCollection);
 
   const loadCollections = async () => {
     try {
