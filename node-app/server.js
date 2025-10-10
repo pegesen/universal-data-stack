@@ -119,10 +119,14 @@ app.get('/', (req, res) => {
 // List all collections
 app.get('/api/collections', async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.json({ collections: [] });
+    }
     const collections = await mongoose.connection.db.listCollections().toArray();
     const collectionNames = collections.map(col => col.name).filter(name => !name.startsWith('system.'));
     res.json({ collections: collectionNames });
   } catch (error) {
+    logger.error('Error listing collections:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -259,7 +263,7 @@ app.get('/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use((error, req, res) => {
+app.use((error, req, res, next) => {
   logger.error('Error:', error);
   res.status(500).json({ 
     error: 'Internal server error',
