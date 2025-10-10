@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import ErrorBoundary from './components/ErrorBoundary';
+import LoadingSpinner from './components/LoadingSpinner';
+import ConfirmDialog from './components/ConfirmDialog';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -11,6 +14,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState(null);
 
   const loadCollections = async () => {
     try {
@@ -117,21 +122,31 @@ function App() {
     }
   };
 
-  const handleDeleteDocument = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this document?')) {
-      return;
-    }
+  const handleDeleteDocument = (id) => {
+    setDocumentToDelete(id);
+    setShowConfirmDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!documentToDelete) return;
 
     setLoading(true);
     try {
-      await axios.delete(`${API_BASE_URL}/api/${currentCollection}/${id}`);
+      await axios.delete(`${API_BASE_URL}/api/${currentCollection}/${documentToDelete}`);
       setSuccess('Document deleted successfully!');
       loadDocuments();
     } catch (err) {
       setError('Failed to delete document: ' + err.message);
     } finally {
       setLoading(false);
+      setShowConfirmDialog(false);
+      setDocumentToDelete(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowConfirmDialog(false);
+    setDocumentToDelete(null);
   };
 
   const formatDocument = (doc) => {
@@ -139,11 +154,12 @@ function App() {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      padding: '20px',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    }}>
+    <ErrorBoundary>
+      <div style={{ 
+        minHeight: '100vh', 
+        padding: '20px',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      }}>
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
@@ -340,9 +356,7 @@ function App() {
               </div>
 
               {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                  <div style={{ fontSize: '18px', color: '#666' }}>Loading documents...</div>
-                </div>
+                <LoadingSpinner text="Loading documents..." />
               ) : documents.length === 0 ? (
                 <div style={{ 
                   textAlign: 'center', 
@@ -412,7 +426,17 @@ function App() {
           )}
         </div>
       </div>
-    </div>
+      
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Document"
+        message="Are you sure you want to delete this document? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+    </ErrorBoundary>
   );
 }
 

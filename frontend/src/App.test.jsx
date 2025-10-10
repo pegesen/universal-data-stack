@@ -55,8 +55,10 @@ describe('App Component', () => {
       fireEvent.change(select, { target: { value: 'users' } });
     });
 
-    expect(screen.getByText(/Add New Document to &quot;users&quot;/)).toBeInTheDocument();
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Add New Document to "users"/)).toBeInTheDocument();
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
   });
 
   it('validates JSON input', async () => {
@@ -70,12 +72,14 @@ describe('App Component', () => {
       fireEvent.change(select, { target: { value: 'users' } });
     });
 
-    const textarea = screen.getByRole('textbox');
-    const saveButton = screen.getByText('Save Document');
+    await waitFor(() => {
+      const textarea = screen.getByRole('textbox');
+      const saveButton = screen.getByText('Save Document');
 
-    // Test invalid JSON
-    fireEvent.change(textarea, { target: { value: 'invalid json' } });
-    fireEvent.click(saveButton);
+      // Test invalid JSON
+      fireEvent.change(textarea, { target: { value: 'invalid json' } });
+      fireEvent.click(saveButton);
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/Invalid JSON format/)).toBeInTheDocument();
@@ -98,13 +102,15 @@ describe('App Component', () => {
       fireEvent.change(select, { target: { value: 'users' } });
     });
 
-    const textarea = screen.getByRole('textbox');
-    const saveButton = screen.getByText('Save Document');
+    await waitFor(() => {
+      const textarea = screen.getByRole('textbox');
+      const saveButton = screen.getByText('Save Document');
 
-    fireEvent.change(textarea, { 
-      target: { value: '{"name": "John Doe", "email": "john@example.com"}' } 
+      fireEvent.change(textarea, { 
+        target: { value: '{"name": "John Doe", "email": "john@example.com"}' } 
+      });
+      fireEvent.click(saveButton);
     });
-    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
@@ -133,7 +139,7 @@ describe('App Component', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Documents in &quot;users&quot; (2)')).toBeInTheDocument();
+      expect(screen.getByText('Documents in "users" (2)')).toBeInTheDocument();
       expect(screen.getByText('John Doe')).toBeInTheDocument();
       expect(screen.getByText('Jane Smith')).toBeInTheDocument();
     });
