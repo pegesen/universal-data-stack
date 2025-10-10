@@ -41,7 +41,9 @@ const connectDB = async () => {
     logger.info('✅ MongoDB connected successfully');
   } catch (error) {
     logger.error('❌ MongoDB connection error:', error);
-    process.exit(1);
+    if (process.env.NODE_ENV !== 'test') {
+      process.exit(1);
+    }
   }
 };
 
@@ -280,4 +282,12 @@ const startServer = async () => {
   });
 };
 
-startServer().catch(logger.error);
+// Only start server if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  startServer().catch(logger.error);
+} else {
+  // In test environment, just connect to database
+  connectDB().catch(logger.error);
+}
+
+module.exports = app;

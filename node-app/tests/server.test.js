@@ -1,25 +1,43 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
+
+// Import app after setting up environment
+process.env.NODE_ENV = 'test';
+process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://admin:password123@localhost:27017/test_data?authSource=admin';
+
 const app = require('../server');
 
 describe('Universal Data Stack API', () => {
   beforeAll(async () => {
-    // Connect to test database
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://admin:password123@localhost:27017/test_data?authSource=admin');
+    // Wait for app to connect to database
+    await new Promise((resolve, reject) => {
+      if (mongoose.connection.readyState === 1) {
+        resolve();
+      } else {
+        mongoose.connection.once('connected', resolve);
+        mongoose.connection.once('error', reject);
+        // Timeout after 10 seconds
+        setTimeout(() => reject(new Error('Database connection timeout')), 10000);
+      }
+    });
   });
 
   afterAll(async () => {
     // Clean up
-    await mongoose.connection.db.dropDatabase();
-    await mongoose.connection.close();
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.db.dropDatabase();
+      await mongoose.connection.close();
+    }
   });
 
   beforeEach(async () => {
     // Clean collections before each test
-    const collections = await mongoose.connection.db.listCollections().toArray();
-    for (const collection of collections) {
-      if (!collection.name.startsWith('system.')) {
-        await mongoose.connection.db.collection(collection.name).deleteMany({});
+    if (mongoose.connection.readyState === 1) {
+      const collections = await mongoose.connection.db.listCollections().toArray();
+      for (const collection of collections) {
+        if (!collection.name.startsWith('system.')) {
+          await mongoose.connection.db.collection(collection.name).deleteMany({});
+        }
       }
     }
   });
