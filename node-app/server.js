@@ -37,8 +37,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://admin:password123@localhost:27017/universal_data?authSource=admin');
+    // eslint-disable-next-line no-console
     console.log('✅ MongoDB connected successfully');
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('❌ MongoDB connection error:', error);
     process.exit(1);
   }
@@ -173,6 +175,7 @@ app.post('/api/:collection', async (req, res) => {
     
     res.status(201).json(savedDocument);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error creating document:', error);
     if (error.name === 'ValidationError') {
       return res.status(400).json({ error: 'Validation error', details: error.message });
@@ -221,6 +224,7 @@ app.put('/api/:collection/:id', async (req, res) => {
     
     res.json(document);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error updating document:', error);
     if (error.name === 'ValidationError') {
       return res.status(400).json({ error: 'Validation error', details: error.message });
@@ -256,7 +260,9 @@ app.get('/health', (req, res) => {
 });
 
 // Error handling middleware
+// eslint-disable-next-line no-unused-vars
 app.use((error, req, res, next) => {
+  // eslint-disable-next-line no-console
   console.error('Error:', error);
   res.status(500).json({ 
     error: 'Internal server error',
@@ -273,10 +279,19 @@ app.use('*', (req, res) => {
 const startServer = async () => {
   await connectDB();
   app.listen(PORT, '0.0.0.0', () => {
+    // eslint-disable-next-line no-console
     console.log(`🚀 Server running on port ${PORT}`);
+    // eslint-disable-next-line no-console
     console.log(`📊 API available at http://localhost:${PORT}`);
+    // eslint-disable-next-line no-console
     console.log(`🏥 Health check at http://localhost:${PORT}/health`);
   });
 };
 
-startServer().catch(console.error);
+// Only start server if this file is run directly
+if (require.main === module) {
+  // eslint-disable-next-line no-console
+  startServer().catch(console.error);
+}
+
+module.exports = { app, connectDB, startServer };

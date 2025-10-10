@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -22,18 +22,19 @@ function App() {
     if (currentCollection) {
       loadDocuments()
     }
-  }, [currentCollection])
+  }, [currentCollection, loadDocuments])
 
   const loadCollections = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/collections`)
-      setCollections(response.data.collections)
+      setCollections(response.data.collections || [])
     } catch (err) {
       setError('Failed to load collections: ' + err.message)
+      setCollections([])
     }
   }
 
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     if (!currentCollection) return
     
     setLoading(true)
@@ -47,7 +48,7 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentCollection])
 
   const handleCollectionChange = (e) => {
     const value = e.target.value
@@ -232,7 +233,7 @@ function App() {
                 fontSize: '1.1rem',
                 color: '#333'
               }}>
-                Add New Document to "{currentCollection}":
+                Add New Document to &quot;{currentCollection}&quot;:
               </label>
               <textarea
                 value={jsonInput}
@@ -320,7 +321,7 @@ function App() {
                 marginBottom: '20px'
               }}>
                 <h2 style={{ color: '#333', fontSize: '1.5rem' }}>
-                  Documents in "{currentCollection}" ({documents.length})
+                  Documents in &quot;{currentCollection}&quot; ({documents.length})
                 </h2>
                 <button
                   onClick={loadDocuments}
