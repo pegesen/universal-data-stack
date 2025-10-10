@@ -1,0 +1,556 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: universal-data-stack
+  labels:
+    grafana_dashboard: "1"
+data:
+  universal-data-stack-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Universal Data Stack - Overview",
+        "tags": ["universal-data-stack", "overview"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Service Health",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "up{job=~\"universal-data-stack-.*\"}",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "id": 2,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total[5m])",
+                "legendFormat": "{{job}} - {{method}} {{handler}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "requests/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 0
+            }
+          },
+          {
+            "id": 3,
+            "title": "Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "50th percentile"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "seconds",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 8
+            }
+          },
+          {
+            "id": 4,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+                "legendFormat": "{{job}} - {{status}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "errors/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 8
+            }
+          },
+          {
+            "id": 5,
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{container!=\"POD\",container!=\"\"}",
+                "legendFormat": "{{pod}} - {{container}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "bytes",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 16
+            }
+          },
+          {
+            "id": 6,
+            "title": "CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{container!=\"POD\",container!=\"\"}[5m])",
+                "legendFormat": "{{pod}} - {{container}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "CPU cores",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 16
+            }
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s",
+        "schemaVersion": 27,
+        "version": 1,
+        "links": []
+      }
+    }
+
+  universal-data-stack-database.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Universal Data Stack - Database",
+        "tags": ["universal-data-stack", "database"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "MongoDB Operations",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(mongodb_opcounters_total[5m])",
+                "legendFormat": "{{operation}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "ops/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "id": 2,
+            "title": "MongoDB Connections",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "mongodb_connections{state=\"current\"}",
+                "legendFormat": "Current connections"
+              },
+              {
+                "expr": "mongodb_connections{state=\"available\"}",
+                "legendFormat": "Available connections"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "connections",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 0
+            }
+          },
+          {
+            "id": 3,
+            "title": "MongoDB Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "mongodb_memory{type=\"resident\"}",
+                "legendFormat": "Resident memory"
+              },
+              {
+                "expr": "mongodb_memory{type=\"virtual\"}",
+                "legendFormat": "Virtual memory"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "bytes",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 8
+            }
+          },
+          {
+            "id": 4,
+            "title": "MongoDB Replication Lag",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "mongodb_replset_member_replication_lag",
+                "legendFormat": "{{member}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "seconds",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 8
+            }
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s",
+        "schemaVersion": 27,
+        "version": 1,
+        "links": []
+      }
+    }
+
+  universal-data-stack-cache.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Universal Data Stack - Cache",
+        "tags": ["universal-data-stack", "cache"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Redis Operations",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(redis_commands_processed_total[5m])",
+                "legendFormat": "Commands/sec"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "ops/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "id": 2,
+            "title": "Redis Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "redis_memory_used_bytes",
+                "legendFormat": "Used memory"
+              },
+              {
+                "expr": "redis_memory_max_bytes",
+                "legendFormat": "Max memory"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "bytes",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 0
+            }
+          },
+          {
+            "id": 3,
+            "title": "Redis Hit Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) * 100",
+                "legendFormat": "Hit rate %"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "percentage",
+                "min": 0,
+                "max": 100
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 8
+            }
+          },
+          {
+            "id": 4,
+            "title": "Redis Connected Clients",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "redis_connected_clients",
+                "legendFormat": "Connected clients"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "clients",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 8
+            }
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s",
+        "schemaVersion": 27,
+        "version": 1,
+        "links": []
+      }
+    }
+
+  universal-data-stack-search.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Universal Data Stack - Search",
+        "tags": ["universal-data-stack", "search"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Elasticsearch Cluster Health",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "elasticsearch_cluster_health_status",
+                "legendFormat": "{{status}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": 0
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "green",
+                      "value": 2
+                    }
+                  ]
+                }
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "id": 2,
+            "title": "Elasticsearch Search Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(elasticsearch_indices_search_query_total[5m])",
+                "legendFormat": "Searches/sec"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "searches/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 0
+            }
+          },
+          {
+            "id": 3,
+            "title": "Elasticsearch Index Size",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "elasticsearch_indices_store_size_bytes",
+                "legendFormat": "{{index}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "bytes",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 8
+            }
+          },
+          {
+            "id": 4,
+            "title": "Elasticsearch Query Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(elasticsearch_indices_search_query_time_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(elasticsearch_indices_search_query_time_seconds_bucket[5m]))",
+                "legendFormat": "50th percentile"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "seconds",
+                "min": 0
+              }
+            ],
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 8
+            }
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s",
+        "schemaVersion": 27,
+        "version": 1,
+        "links": []
+      }
+    }

@@ -46,6 +46,7 @@ sudo docker run -d --name universal-mongo \
     -e MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME:-admin} \
     -e MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-password123} \
     -e MONGO_INITDB_DATABASE=${MONGO_DATABASE:-universal_data} \
+    -v mongo_data:/data/db \
     mongo:7.0 2>/dev/null || echo "MongoDB already running"
 
 # Warten bis MongoDB bereit ist

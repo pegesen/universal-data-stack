@@ -1,10 +1,16 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
-import axios from 'axios';
 import App from './App';
 
-// Mock axios
-vi.mock('axios');
+// Mock API service
+vi.mock('./utils/api', () => ({
+  default: {
+    getCollections: vi.fn(),
+    getDocuments: vi.fn(),
+    createDocument: vi.fn(),
+    deleteDocument: vi.fn(),
+  }
+}));
 
 describe('App Component', () => {
   beforeEach(() => {
@@ -25,17 +31,19 @@ describe('App Component', () => {
 
   it('loads collections on mount', async () => {
     const mockCollections = ['users', 'products', 'orders'];
-    axios.get.mockResolvedValueOnce({ data: { collections: mockCollections } });
+    const { default: apiService } = await import('./utils/api');
+    apiService.getCollections.mockResolvedValueOnce({ collections: mockCollections });
 
     render(<App />);
 
     await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith('http://localhost:3000/api/collections');
+      expect(apiService.getCollections).toHaveBeenCalled();
     });
   });
 
   it('shows error message when collections fail to load', async () => {
-    axios.get.mockRejectedValueOnce(new Error('Network error'));
+    const { default: apiService } = await import('./utils/api');
+    apiService.getCollections.mockRejectedValueOnce(new Error('Network error'));
 
     render(<App />);
 
@@ -46,7 +54,9 @@ describe('App Component', () => {
 
   it('shows JSON input when collection is selected', async () => {
     const mockCollections = ['users'];
-    axios.get.mockResolvedValueOnce({ data: { collections: mockCollections } });
+    const { default: apiService } = await import('./utils/api');
+    apiService.getCollections.mockResolvedValueOnce({ collections: mockCollections });
+    apiService.getDocuments.mockResolvedValueOnce({ data: [], pagination: { page: 1, limit: 100, total: 0, pages: 0 } });
 
     render(<App />);
 
@@ -55,13 +65,17 @@ describe('App Component', () => {
       fireEvent.change(select, { target: { value: 'users' } });
     });
 
-    expect(screen.getByText(/Add New Document to &quot;users&quot;/)).toBeInTheDocument();
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Add New Document to "users"/)).toBeInTheDocument();
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
   });
 
   it('validates JSON input', async () => {
     const mockCollections = ['users'];
-    axios.get.mockResolvedValueOnce({ data: { collections: mockCollections } });
+    const { default: apiService } = await import('./utils/api');
+    apiService.getCollections.mockResolvedValueOnce({ collections: mockCollections });
+    apiService.getDocuments.mockResolvedValueOnce({ data: [], pagination: { page: 1, limit: 100, total: 0, pages: 0 } });
 
     render(<App />);
 
@@ -70,12 +84,14 @@ describe('App Component', () => {
       fireEvent.change(select, { target: { value: 'users' } });
     });
 
-    const textarea = screen.getByRole('textbox');
-    const saveButton = screen.getByText('Save Document');
+    await waitFor(() => {
+      const textarea = screen.getByRole('textbox');
+      const saveButton = screen.getByText('Save Document');
 
-    // Test invalid JSON
-    fireEvent.change(textarea, { target: { value: 'invalid json' } });
-    fireEvent.click(saveButton);
+      // Test invalid JSON
+      fireEvent.change(textarea, { target: { value: 'invalid json' } });
+      fireEvent.click(saveButton);
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/Invalid JSON format/)).toBeInTheDocument();
@@ -85,11 +101,11 @@ describe('App Component', () => {
   it('saves document with valid JSON', async () => {
     const mockCollections = ['users'];
     const mockDocument = { _id: '123', name: 'John Doe', email: 'john@example.com' };
-
-    axios.get
-      .mockResolvedValueOnce({ data: { collections: mockCollections } })
-      .mockResolvedValueOnce({ data: { data: [] } })
-      .mockResolvedValueOnce({ data: mockDocument });
+    const { default: apiService } = await import('./utils/api');
+    
+    apiService.getCollections.mockResolvedValueOnce({ collections: mockCollections });
+    apiService.getDocuments.mockResolvedValueOnce({ data: [], pagination: { page: 1, limit: 100, total: 0, pages: 0 } });
+    apiService.createDocument.mockResolvedValueOnce(mockDocument);
 
     render(<App />);
 
@@ -98,17 +114,18 @@ describe('App Component', () => {
       fireEvent.change(select, { target: { value: 'users' } });
     });
 
-    const textarea = screen.getByRole('textbox');
-    const saveButton = screen.getByText('Save Document');
+    await waitFor(() => {
+      const textarea = screen.getByRole('textbox');
+      const saveButton = screen.getByText('Save Document');
 
-    fireEvent.change(textarea, { 
-      target: { value: '{"name": "John Doe", "email": "john@example.com"}' } 
+      fireEvent.change(textarea, { 
+        target: { value: '{"name": "John Doe", "email": "john@example.com"}' } 
+      });
+      fireEvent.click(saveButton);
     });
-    fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(axios.post).toHaveBeenCalledWith(
-        'http://localhost:3000/api/users',
+      expect(apiService.createDocument).toHaveBeenCalledWith(
         { name: 'John Doe', email: 'john@example.com' }
       );
     });
@@ -120,10 +137,13 @@ describe('App Component', () => {
       { _id: '1', name: 'John Doe' },
       { _id: '2', name: 'Jane Smith' }
     ];
-
-    axios.get
-      .mockResolvedValueOnce({ data: { collections: mockCollections } })
-      .mockResolvedValueOnce({ data: { data: mockDocuments } });
+    const { default: apiService } = await import('./utils/api');
+    
+    apiService.getCollections.mockResolvedValueOnce({ collections: mockCollections });
+    apiService.getDocuments.mockResolvedValueOnce({ 
+      data: mockDocuments, 
+      pagination: { page: 1, limit: 100, total: 2, pages: 1 } 
+    });
 
     render(<App />);
 
@@ -133,7 +153,7 @@ describe('App Component', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Documents in &quot;users&quot; (2)')).toBeInTheDocument();
+      expect(screen.getByText('Documents in "users" (2)')).toBeInTheDocument();
       expect(screen.getByText('John Doe')).toBeInTheDocument();
       expect(screen.getByText('Jane Smith')).toBeInTheDocument();
     });
@@ -142,14 +162,19 @@ describe('App Component', () => {
   it('deletes document when delete button is clicked', async () => {
     const mockCollections = ['users'];
     const mockDocuments = [{ _id: '1', name: 'John Doe' }];
-
-    axios.get
-      .mockResolvedValueOnce({ data: { collections: mockCollections } })
-      .mockResolvedValueOnce({ data: { data: mockDocuments } })
-      .mockResolvedValueOnce({ data: { data: [] } });
-
-    // Mock window.confirm
-    window.confirm = vi.fn(() => true);
+    const { default: apiService } = await import('./utils/api');
+    
+    apiService.getCollections.mockResolvedValueOnce({ collections: mockCollections });
+    apiService.getDocuments
+      .mockResolvedValueOnce({ 
+        data: mockDocuments, 
+        pagination: { page: 1, limit: 100, total: 1, pages: 1 } 
+      })
+      .mockResolvedValueOnce({ 
+        data: [], 
+        pagination: { page: 1, limit: 100, total: 0, pages: 0 } 
+      });
+    apiService.deleteDocument.mockResolvedValueOnce();
 
     render(<App />);
 
@@ -163,7 +188,11 @@ describe('App Component', () => {
       fireEvent.click(deleteButton);
     });
 
-    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this document?');
-    expect(axios.delete).toHaveBeenCalledWith('http://localhost:3000/api/users/1');
+    await waitFor(() => {
+      const confirmButton = screen.getByText('Delete');
+      fireEvent.click(confirmButton);
+    });
+
+    expect(apiService.deleteDocument).toHaveBeenCalledWith('1');
   });
 });
