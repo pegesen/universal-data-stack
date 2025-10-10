@@ -1,0 +1,206 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: universal-data-stack-gateway
+  namespace: universal-data-stack
+  labels:
+    app: universal-data-stack
+    component: gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - api.universaldata.local
+    - "*.universaldata.local"
+    tls:
+      httpsRedirect: true
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - api.universaldata.local
+    - "*.universaldata.local"
+    tls:
+      mode: SIMPLE
+      credentialName: universal-data-stack-tls
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: universal-data-stack-vs
+  namespace: universal-data-stack
+  labels:
+    app: universal-data-stack
+    component: virtual-service
+spec:
+  hosts:
+  - api.universaldata.local
+  - "*.universaldata.local"
+  gateways:
+  - universal-data-stack-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /api/auth
+    route:
+    - destination:
+        host: universal-data-stack-auth-service
+        port:
+          number: 80
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+  - match:
+    - uri:
+        prefix: /api/collections
+    route:
+    - destination:
+        host: universal-data-stack-data-service
+        port:
+          number: 80
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+  - match:
+    - uri:
+        prefix: /api/search
+    route:
+    - destination:
+        host: universal-data-stack-search-service
+        port:
+          number: 80
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+  - match:
+    - uri:
+        prefix: /api/notifications
+    route:
+    - destination:
+        host: universal-data-stack-notification-service
+        port:
+          number: 80
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+  - match:
+    - uri:
+        prefix: /api/analytics
+    route:
+    - destination:
+        host: universal-data-stack-analytics-service
+        port:
+          number: 80
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: universal-data-stack-api-gateway
+        port:
+          number: 80
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: universal-data-stack-dr
+  namespace: universal-data-stack
+  labels:
+    app: universal-data-stack
+    component: destination-rule
+spec:
+  host: universal-data-stack-api-gateway
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 50
+        maxRequestsPerConnection: 10
+    circuitBreaker:
+      consecutiveErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+    trafficPolicy:
+      connectionPool:
+        tcp:
+          maxConnections: 50
+        http:
+          http1MaxPendingRequests: 25
+          maxRequestsPerConnection: 5
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: external-services
+  namespace: universal-data-stack
+  labels:
+    app: universal-data-stack
+    component: service-entry
+spec:
+  hosts:
+  - external-api.example.com
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: universal-data-stack-envoy-filter
+  namespace: universal-data-stack
+  labels:
+    app: universal-data-stack
+    component: envoy-filter
+spec:
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: SIDECAR_INBOUND
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.cors
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+          allow_origin_string_match:
+          - prefix: "*"
+          allow_methods: "GET, POST, PUT, DELETE, OPTIONS"
+          allow_headers: "content-type, authorization, x-requested-with"
+          expose_headers: "x-ratelimit-limit, x-ratelimit-remaining, x-ratelimit-reset"
+          max_age: "86400"
