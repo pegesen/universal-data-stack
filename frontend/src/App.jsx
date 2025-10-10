@@ -1,165 +1,185 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 function App() {
-  const [collections, setCollections] = useState([])
-  const [currentCollection, setCurrentCollection] = useState('')
-  const [documents, setDocuments] = useState([])
-  const [jsonInput, setJsonInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [collections, setCollections] = useState([]);
+  const [currentCollection, setCurrentCollection] = useState('');
+  const [documents, setDocuments] = useState([]);
+  const [jsonInput, setJsonInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   // Load collections on mount
   useEffect(() => {
-    loadCollections()
-  }, [])
+    loadCollections();
+  }, []);
 
   // Load documents when collection changes
   useEffect(() => {
     if (currentCollection) {
-      loadDocuments()
+      loadDocuments();
     }
-  }, [currentCollection])
+  }, [currentCollection]);
 
   const loadCollections = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/collections`)
-      setCollections(response.data.collections)
+      const response = await axios.get(`${API_BASE_URL}/api/collections`);
+      const list = Array.isArray(response?.data?.collections)
+        ? response.data.collections
+        : [];
+      setCollections(list);
+      if (!currentCollection && list.length > 0) {
+        setCurrentCollection(list[0]);
+      }
     } catch (err) {
-      setError('Failed to load collections: ' + err.message)
+      setError('Failed to load collections: ' + err.message);
     }
-  }
+  };
 
   const loadDocuments = async () => {
-    if (!currentCollection) return
-    
-    setLoading(true)
+    if (!currentCollection) return;
+
+    setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/${currentCollection}`)
-      setDocuments(response.data.data || [])
-      setError('')
+      const response = await axios.get(
+        `${API_BASE_URL}/api/${currentCollection}`
+      );
+      setDocuments(response.data.data || []);
+      setError('');
     } catch (err) {
-      setError('Failed to load documents: ' + err.message)
-      setDocuments([])
+      setError('Failed to load documents: ' + err.message);
+      setDocuments([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleCollectionChange = (e) => {
-    const value = e.target.value
-    setCurrentCollection(value)
-    setJsonInput('')
-    setError('')
-    setSuccess('')
-  }
+  const handleCollectionChange = e => {
+    const value = e.target.value;
+    setCurrentCollection(value);
+    setJsonInput('');
+    setError('');
+    setSuccess('');
+  };
 
-  const handleJsonInputChange = (e) => {
-    setJsonInput(e.target.value)
-    setError('')
-  }
+  const handleJsonInputChange = e => {
+    setJsonInput(e.target.value);
+    setError('');
+  };
 
-  const validateJson = (jsonString) => {
+  const validateJson = jsonString => {
     if (!jsonString.trim()) {
-      throw new Error('JSON input cannot be empty')
+      throw new Error('JSON input cannot be empty');
     }
-    
+
     try {
-      const parsed = JSON.parse(jsonString)
-      
+      const parsed = JSON.parse(jsonString);
+
       // Basic validation
       if (typeof parsed !== 'object' || parsed === null) {
-        throw new Error('JSON must be an object')
+        throw new Error('JSON must be an object');
       }
-      
-      // Check for dangerous properties
-      const dangerousProps = ['__proto__', 'constructor', 'prototype']
+
+      // Check for dangerous own properties only
+      const dangerousProps = ['__proto__', 'constructor', 'prototype'];
       for (const prop of dangerousProps) {
-        if (prop in parsed) {
-          throw new Error(`Property '${prop}' is not allowed`)
+        if (Object.prototype.hasOwnProperty.call(parsed, prop)) {
+          throw new Error(`Property '${prop}' is not allowed`);
         }
       }
-      
-      return parsed
+
+      return parsed;
     } catch (err) {
       if (err instanceof SyntaxError) {
-        throw new Error('Invalid JSON format')
+        throw new Error('Invalid JSON format');
       }
-      throw err
+      throw err;
     }
-  }
+  };
 
   const handleSaveDocument = async () => {
     if (!currentCollection) {
-      setError('Please select a collection first')
-      return
+      setError('Please select a collection first');
+      return;
     }
 
     if (!jsonInput.trim()) {
-      setError('Please enter JSON data')
-      return
+      setError('Please enter JSON data');
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = validateJson(jsonInput)
-      await axios.post(`${API_BASE_URL}/api/${currentCollection}`, data)
-      setSuccess('Document saved successfully!')
-      setJsonInput('')
-      loadDocuments()
+      const data = validateJson(jsonInput);
+      await axios.post(`${API_BASE_URL}/api/${currentCollection}`, data);
+      setSuccess('Document saved successfully!');
+      setJsonInput('');
+      loadDocuments();
     } catch (err) {
-      setError('Failed to save document: ' + err.message)
+      setError('Failed to save document: ' + err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleDeleteDocument = async (id) => {
+  const handleDeleteDocument = async id => {
     if (!window.confirm('Are you sure you want to delete this document?')) {
-      return
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      await axios.delete(`${API_BASE_URL}/api/${currentCollection}/${id}`)
-      setSuccess('Document deleted successfully!')
-      loadDocuments()
+      await axios.delete(`${API_BASE_URL}/api/${currentCollection}/${id}`);
+      setSuccess('Document deleted successfully!');
+      loadDocuments();
     } catch (err) {
-      setError('Failed to delete document: ' + err.message)
+      setError('Failed to delete document: ' + err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const formatDocument = (doc) => {
-    return JSON.stringify(doc, null, 2)
-  }
+  const formatDocument = doc => {
+    return JSON.stringify(doc, null, 2);
+  };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      padding: '20px',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    }}>
-      <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-        overflow: 'hidden'
-      }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        padding: '20px',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          background: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+          overflow: 'hidden',
+        }}
+      >
         {/* Header */}
-        <div style={{
-          background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-          color: 'white',
-          padding: '30px',
-          textAlign: 'center'
-        }}>
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '10px', fontWeight: '700' }}>
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            color: 'white',
+            padding: '30px',
+            textAlign: 'center',
+          }}
+        >
+          <h1
+            style={{
+              fontSize: '2.5rem',
+              marginBottom: '10px',
+              fontWeight: '700',
+            }}
+          >
             Universal Data Stack
           </h1>
           <p style={{ fontSize: '1.1rem', opacity: 0.9 }}>
@@ -170,13 +190,15 @@ function App() {
         <div style={{ padding: '30px' }}>
           {/* Collection Selection */}
           <div style={{ marginBottom: '30px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '10px', 
-              fontWeight: '600',
-              fontSize: '1.1rem',
-              color: '#333'
-            }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '10px',
+                fontWeight: '600',
+                fontSize: '1.1rem',
+                color: '#333',
+              }}
+            >
               Select Collection:
             </label>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -190,13 +212,13 @@ function App() {
                   borderRadius: '8px',
                   fontSize: '16px',
                   outline: 'none',
-                  transition: 'border-color 0.2s'
+                  transition: 'border-color 0.2s',
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#4facfe'}
-                onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                onFocus={e => (e.target.style.borderColor = '#4facfe')}
+                onBlur={e => (e.target.style.borderColor = '#e1e5e9')}
               >
                 <option value="">Choose a collection...</option>
-                {collections.map(collection => (
+                {(Array.isArray(collections) ? collections : []).map(collection => (
                   <option key={collection} value={collection}>
                     {collection}
                   </option>
@@ -212,10 +234,10 @@ function App() {
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: '600',
-                  transition: 'background 0.2s'
+                  transition: 'background 0.2s',
                 }}
-                onMouseOver={(e) => e.target.style.background = '#218838'}
-                onMouseOut={(e) => e.target.style.background = '#28a745'}
+                onMouseOver={e => (e.target.style.background = '#218838')}
+                onMouseOut={e => (e.target.style.background = '#28a745')}
               >
                 Refresh
               </button>
@@ -225,14 +247,16 @@ function App() {
           {/* JSON Input */}
           {currentCollection && (
             <div style={{ marginBottom: '30px' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '10px', 
-                fontWeight: '600',
-                fontSize: '1.1rem',
-                color: '#333'
-              }}>
-                Add New Document to "{currentCollection}":
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '10px',
+                  fontWeight: '600',
+                  fontSize: '1.1rem',
+                  color: '#333',
+                }}
+              >
+                Add New Document to &quot;{currentCollection}&quot;:
               </label>
               <textarea
                 value={jsonInput}
@@ -248,10 +272,10 @@ function App() {
                   fontFamily: 'Monaco, Consolas, "Courier New", monospace',
                   outline: 'none',
                   resize: 'vertical',
-                  transition: 'border-color 0.2s'
+                  transition: 'border-color 0.2s',
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#4facfe'}
-                onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                onFocus={e => (e.target.style.borderColor = '#4facfe')}
+                onBlur={e => (e.target.style.borderColor = '#e1e5e9')}
               />
               <button
                 onClick={handleSaveDocument}
@@ -263,18 +287,19 @@ function App() {
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: loading || !jsonInput.trim() ? 'not-allowed' : 'pointer',
+                  cursor:
+                    loading || !jsonInput.trim() ? 'not-allowed' : 'pointer',
                   fontWeight: '600',
-                  transition: 'background 0.2s'
+                  transition: 'background 0.2s',
                 }}
-                onMouseOver={(e) => {
+                onMouseOver={e => {
                   if (!loading && jsonInput.trim()) {
-                    e.target.style.background = '#0056b3'
+                    e.target.style.background = '#0056b3';
                   }
                 }}
-                onMouseOut={(e) => {
+                onMouseOut={e => {
                   if (!loading && jsonInput.trim()) {
-                    e.target.style.background = '#007bff'
+                    e.target.style.background = '#007bff';
                   }
                 }}
               >
@@ -285,27 +310,31 @@ function App() {
 
           {/* Messages */}
           {error && (
-            <div style={{
-              padding: '15px',
-              background: '#f8d7da',
-              color: '#721c24',
-              border: '1px solid #f5c6cb',
-              borderRadius: '8px',
-              marginBottom: '20px'
-            }}>
+            <div
+              style={{
+                padding: '15px',
+                background: '#f8d7da',
+                color: '#721c24',
+                border: '1px solid #f5c6cb',
+                borderRadius: '8px',
+                marginBottom: '20px',
+              }}
+            >
               {error}
             </div>
           )}
 
           {success && (
-            <div style={{
-              padding: '15px',
-              background: '#d4edda',
-              color: '#155724',
-              border: '1px solid #c3e6cb',
-              borderRadius: '8px',
-              marginBottom: '20px'
-            }}>
+            <div
+              style={{
+                padding: '15px',
+                background: '#d4edda',
+                color: '#155724',
+                border: '1px solid #c3e6cb',
+                borderRadius: '8px',
+                marginBottom: '20px',
+              }}
+            >
               {success}
             </div>
           )}
@@ -313,14 +342,17 @@ function App() {
           {/* Documents List */}
           {currentCollection && (
             <div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: '20px'
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '20px',
+                }}
+              >
                 <h2 style={{ color: '#333', fontSize: '1.5rem' }}>
-                  Documents in "{currentCollection}" ({documents.length})
+                  Documents in &quot;{currentCollection}&quot; (
+                  {documents.length})
                 </h2>
                 <button
                   onClick={loadDocuments}
@@ -332,7 +364,7 @@ function App() {
                     border: 'none',
                     borderRadius: '6px',
                     cursor: loading ? 'not-allowed' : 'pointer',
-                    fontSize: '14px'
+                    fontSize: '14px',
                   }}
                 >
                   {loading ? 'Loading...' : 'Refresh'}
@@ -341,37 +373,49 @@ function App() {
 
               {loading ? (
                 <div style={{ textAlign: 'center', padding: '40px' }}>
-                  <div style={{ fontSize: '18px', color: '#666' }}>Loading documents...</div>
+                  <div style={{ fontSize: '18px', color: '#666' }}>
+                    Loading documents...
+                  </div>
                 </div>
               ) : documents.length === 0 ? (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '40px',
-                  background: '#f8f9fa',
-                  borderRadius: '8px',
-                  color: '#666'
-                }}>
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    background: '#f8f9fa',
+                    borderRadius: '8px',
+                    color: '#666',
+                  }}
+                >
                   No documents found in this collection
                 </div>
               ) : (
                 <div style={{ display: 'grid', gap: '20px' }}>
-                  {documents.map((doc, index) => (
+                  {(Array.isArray(documents) ? documents : []).map((doc, index) => (
                     <div
                       key={doc._id || index}
                       style={{
                         border: '1px solid #e1e5e9',
                         borderRadius: '8px',
                         padding: '20px',
-                        background: '#f8f9fa'
+                        background: '#f8f9fa',
                       }}
                     >
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'flex-start',
-                        marginBottom: '15px'
-                      }}>
-                        <div style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '15px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            color: '#666',
+                            fontFamily: 'monospace',
+                          }}
+                        >
                           ID: {doc._id}
                         </div>
                         <button
@@ -384,24 +428,31 @@ function App() {
                             borderRadius: '4px',
                             cursor: 'pointer',
                             fontSize: '12px',
-                            fontWeight: '600'
+                            fontWeight: '600',
                           }}
-                          onMouseOver={(e) => e.target.style.background = '#c82333'}
-                          onMouseOut={(e) => e.target.style.background = '#dc3545'}
+                          onMouseOver={e =>
+                            (e.target.style.background = '#c82333')
+                          }
+                          onMouseOut={e =>
+                            (e.target.style.background = '#dc3545')
+                          }
                         >
                           Delete
                         </button>
                       </div>
-                      <pre style={{
-                        background: 'white',
-                        padding: '15px',
-                        borderRadius: '6px',
-                        border: '1px solid #e1e5e9',
-                        fontSize: '12px',
-                        overflow: 'auto',
-                        maxHeight: '300px',
-                        fontFamily: 'Monaco, Consolas, "Courier New", monospace'
-                      }}>
+                      <pre
+                        style={{
+                          background: 'white',
+                          padding: '15px',
+                          borderRadius: '6px',
+                          border: '1px solid #e1e5e9',
+                          fontSize: '12px',
+                          overflow: 'auto',
+                          maxHeight: '300px',
+                          fontFamily:
+                            'Monaco, Consolas, "Courier New", monospace',
+                        }}
+                      >
                         {formatDocument(doc)}
                       </pre>
                     </div>
@@ -413,7 +464,7 @@ function App() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

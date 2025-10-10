@@ -1,22 +1,36 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const app = require('../server');
 
+jest.setTimeout(30000);
+
 describe('Universal Data Stack API', () => {
+  let mongoServer;
+
   beforeAll(async () => {
-    // Connect to test database
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://admin:password123@localhost:27017/test_data?authSource=admin');
+    mongoServer = await MongoMemoryServer.create();
+    const uri = mongoServer.getUri();
+    process.env.MONGODB_URI = uri;
+    await mongoose.connect(uri);
   });
 
   afterAll(async () => {
     // Clean up
-    await mongoose.connection.db.dropDatabase();
+    if (mongoose.connection?.db) {
+      await mongoose.connection.db.dropDatabase();
+    }
     await mongoose.connection.close();
+    if (mongoServer) {
+      await mongoServer.stop();
+    }
   });
 
   beforeEach(async () => {
     // Clean collections before each test
-    const collections = await mongoose.connection.db.listCollections().toArray();
+    const collections = await mongoose.connection.db
+      .listCollections()
+      .toArray();
     for (const collection of collections) {
       if (!collection.name.startsWith('system.')) {
         await mongoose.connection.db.collection(collection.name).deleteMany({});
@@ -53,10 +67,8 @@ describe('Universal Data Stack API', () => {
   describe('POST /api/:collection', () => {
     it('should create a new document', async () => {
       const testData = { name: 'John Doe', email: 'john@example.com' };
-      const res = await request(app)
-        .post('/api/users')
-        .send(testData);
-      
+      const res = await request(app).post('/api/users').send(testData);
+
       expect(res.status).toBe(201);
       expect(res.body.name).toBe(testData.name);
       expect(res.body.email).toBe(testData.email);
@@ -65,34 +77,32 @@ describe('Universal Data Stack API', () => {
 
     it('should reject invalid collection names', async () => {
       const testData = { name: 'John Doe' };
-      const res = await request(app)
-        .post('/api/123invalid')
-        .send(testData);
-      
+      const res = await request(app).post('/api/123invalid').send(testData);
+
       expect(res.status).toBe(500);
     });
 
     it('should reject empty data', async () => {
-      const res = await request(app)
-        .post('/api/users')
-        .send({});
-      
+      const res = await request(app).post('/api/users').send({});
+
       expect(res.status).toBe(400);
     });
 
     it('should sanitize dangerous input', async () => {
-      const dangerousData = { 
+      const dangerousData = {
         name: 'John Doe',
         __proto__: { isAdmin: true },
-        constructor: 'malicious'
+        constructor: 'malicious',
       };
-      const res = await request(app)
-        .post('/api/users')
-        .send(dangerousData);
-      
+      const res = await request(app).post('/api/users').send(dangerousData);
+
       expect(res.status).toBe(201);
-      expect(res.body.__proto__).toBeUndefined();
-      expect(res.body.constructor).toBeUndefined();
+      expect(Object.prototype.hasOwnProperty.call(res.body, '__proto__')).toBe(
+        false
+      );
+      expect(
+        Object.prototype.hasOwnProperty.call(res.body, 'constructor')
+      ).toBe(false);
     });
   });
 
@@ -101,13 +111,11 @@ describe('Universal Data Stack API', () => {
       // Create test documents
       const testData = [
         { name: 'John Doe', age: 30 },
-        { name: 'Jane Smith', age: 25 }
+        { name: 'Jane Smith', age: 25 },
       ];
-      
+
       for (const data of testData) {
-        await request(app)
-          .post('/api/users')
-          .send(data);
+        await request(app).post('/api/users').send(data);
       }
     });
 
@@ -132,9 +140,7 @@ describe('Universal Data Stack API', () => {
 
     beforeEach(async () => {
       const testData = { name: 'John Doe', email: 'john@example.com' };
-      const res = await request(app)
-        .post('/api/users')
-        .send(testData);
+      const res = await request(app).post('/api/users').send(testData);
       documentId = res.body._id;
     });
 
@@ -156,9 +162,7 @@ describe('Universal Data Stack API', () => {
 
     beforeEach(async () => {
       const testData = { name: 'John Doe', email: 'john@example.com' };
-      const res = await request(app)
-        .post('/api/users')
-        .send(testData);
+      const res = await request(app).post('/api/users').send(testData);
       documentId = res.body._id;
     });
 
@@ -167,7 +171,7 @@ describe('Universal Data Stack API', () => {
       const res = await request(app)
         .put(`/api/users/${documentId}`)
         .send(updateData);
-      
+
       expect(res.status).toBe(200);
       expect(res.body.name).toBe('John Updated');
     });
@@ -177,7 +181,7 @@ describe('Universal Data Stack API', () => {
       const res = await request(app)
         .put(`/api/users/${fakeId}`)
         .send({ name: 'Updated' });
-      
+
       expect(res.status).toBe(404);
     });
   });
@@ -187,9 +191,7 @@ describe('Universal Data Stack API', () => {
 
     beforeEach(async () => {
       const testData = { name: 'John Doe', email: 'john@example.com' };
-      const res = await request(app)
-        .post('/api/users')
-        .send(testData);
+      const res = await request(app).post('/api/users').send(testData);
       documentId = res.body._id;
     });
 

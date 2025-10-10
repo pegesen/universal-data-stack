@@ -10,9 +10,9 @@ module.exports = {
     sourceType: 'module',
   },
   rules: {
-    'indent': ['error', 2],
-    'quotes': ['error', 'single'],
-    'semi': ['error', 'always'],
+    indent: ['error', 2],
+    quotes: ['error', 'single'],
+    semi: ['error', 'always'],
     'no-unused-vars': 'warn',
     'no-console': 'warn',
     'prefer-const': 'error',
