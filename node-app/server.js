@@ -135,6 +135,20 @@ app.get('/api/collections', async (req, res) => {
 app.get('/api/:collection', async (req, res) => {
   try {
     const { collection } = req.params;
+    
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      return res.json({
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 100,
+          total: 0,
+          pages: 0
+        }
+      });
+    }
+    
     const { page = 1, limit = 100, sort = '_id', order = 'desc' } = req.query;
     
     const Model = getCollectionModel(collection);
@@ -160,6 +174,7 @@ app.get('/api/:collection', async (req, res) => {
       }
     });
   } catch (error) {
+    logger.error('Error getting documents:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -192,6 +207,12 @@ app.post('/api/:collection', async (req, res) => {
 app.get('/api/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
+    
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    
     const Model = getCollectionModel(collection);
     
     const document = await Model.findById(id);
@@ -201,6 +222,7 @@ app.get('/api/:collection/:id', async (req, res) => {
     
     res.json(document);
   } catch (error) {
+    logger.error('Error getting document:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -216,6 +238,12 @@ app.put('/api/:collection/:id', async (req, res) => {
     }
     
     const Model = getCollectionModel(collection);
+    
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+    
     const document = await Model.findByIdAndUpdate(
       id, 
       data, 
@@ -245,6 +273,12 @@ app.delete('/api/:collection/:id', async (req, res) => {
     const document = await Model.findByIdAndDelete(id);
     if (!document) {
       return res.status(404).json({ error: 'Document not found' });
+    
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+    
     }
     
     res.json({ message: 'Document deleted successfully', id });
