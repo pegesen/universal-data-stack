@@ -46,28 +46,48 @@ describe('App Component', () => {
 
   it('shows JSON input when collection is selected', async () => {
     const mockCollections = ['users'];
-    axios.get.mockResolvedValueOnce({ data: { collections: mockCollections } });
+    axios.get
+      .mockResolvedValueOnce({ data: { collections: mockCollections } })
+      .mockResolvedValueOnce({ data: { data: [] } });
 
     render(<App />);
 
+    // Wait for collections to load
     await waitFor(() => {
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'users' } });
+      expect(screen.getByText('users')).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Add New Document to &quot;users&quot;/)).toBeInTheDocument();
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    // Select collection
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'users' } });
+
+    // Wait for documents to load and UI to update
+    await waitFor(() => {
+      expect(screen.getByText(/Add New Document to &quot;users&quot;/)).toBeInTheDocument();
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
   });
 
   it('validates JSON input', async () => {
     const mockCollections = ['users'];
-    axios.get.mockResolvedValueOnce({ data: { collections: mockCollections } });
+    axios.get
+      .mockResolvedValueOnce({ data: { collections: mockCollections } })
+      .mockResolvedValueOnce({ data: { data: [] } });
 
     render(<App />);
 
+    // Wait for collections to load
     await waitFor(() => {
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'users' } });
+      expect(screen.getByText('users')).toBeInTheDocument();
+    });
+
+    // Select collection
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'users' } });
+
+    // Wait for UI to update
+    await waitFor(() => {
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
     });
 
     const textarea = screen.getByRole('textbox');
@@ -88,14 +108,23 @@ describe('App Component', () => {
 
     axios.get
       .mockResolvedValueOnce({ data: { collections: mockCollections } })
-      .mockResolvedValueOnce({ data: { data: [] } })
-      .mockResolvedValueOnce({ data: mockDocument });
+      .mockResolvedValueOnce({ data: { data: [] } });
+    axios.post.mockResolvedValueOnce({ data: mockDocument });
 
     render(<App />);
 
+    // Wait for collections to load
     await waitFor(() => {
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'users' } });
+      expect(screen.getByText('users')).toBeInTheDocument();
+    });
+
+    // Select collection
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'users' } });
+
+    // Wait for UI to update
+    await waitFor(() => {
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
     });
 
     const textarea = screen.getByRole('textbox');
@@ -127,11 +156,16 @@ describe('App Component', () => {
 
     render(<App />);
 
+    // Wait for collections to load
     await waitFor(() => {
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'users' } });
+      expect(screen.getByText('users')).toBeInTheDocument();
     });
 
+    // Select collection
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'users' } });
+
+    // Wait for documents to load
     await waitFor(() => {
       expect(screen.getByText('Documents in &quot;users&quot; (2)')).toBeInTheDocument();
       expect(screen.getByText('John Doe')).toBeInTheDocument();
@@ -145,8 +179,8 @@ describe('App Component', () => {
 
     axios.get
       .mockResolvedValueOnce({ data: { collections: mockCollections } })
-      .mockResolvedValueOnce({ data: { data: mockDocuments } })
-      .mockResolvedValueOnce({ data: { data: [] } });
+      .mockResolvedValueOnce({ data: { data: mockDocuments } });
+    axios.delete.mockResolvedValueOnce({ data: { data: [] } });
 
     // Mock window.confirm
     window.confirm = vi.fn(() => true);
