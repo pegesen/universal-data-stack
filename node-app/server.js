@@ -30,8 +30,18 @@ app.use(cors({
   credentials: true
 }));
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
+// Body parsing with better error handling
+app.use(express.json({ 
+  limit: '10mb',
+  verify: (req, res, buf, encoding) => {
+    try {
+      JSON.parse(buf);
+    } catch (e) {
+      res.status(400).json({ error: 'Invalid JSON format' });
+      return false;
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // MongoDB Connection
@@ -138,15 +148,16 @@ app.get('/api/:collection', async (req, res) => {
     
     // Check if MongoDB is connected
     if (mongoose.connection.readyState !== 1) {
-      return res.json({
-        data: [],
-        pagination: {
-          page: 1,
-          limit: 100,
-          total: 0,
-          pages: 0
-        }
-      });
+      // Without MongoDB, we can't verify if collection exists, so return 404 for any collection
+      return res.status(404).json({ error: 'Collection not found' });
+    }
+    
+    // Check if collection exists
+    const collections = await mongoose.connection.db.listCollections().toArray();
+    const collectionNames = collections.map(col => col.name).filter(name => !name.startsWith('system.'));
+    
+    if (!collectionNames.includes(collection)) {
+      return res.status(404).json({ error: 'Collection not found' });
     }
     
     const { page = 1, limit = 100, sort = '_id', order = 'desc' } = req.query;
@@ -175,6 +186,10 @@ app.get('/api/:collection', async (req, res) => {
     });
   } catch (error) {
     logger.error('Error getting documents:', error);
+    // If it's a validation error for collection name, return 404
+    if (error.message.includes('Collection name must start with a letter')) {
+      return res.status(404).json({ error: 'Collection not found' });
+    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -268,21 +283,21 @@ app.put('/api/:collection/:id', async (req, res) => {
 app.delete('/api/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
-    const Model = getCollectionModel(collection);
-    
-    const document = await Model.findByIdAndDelete(id);
-    if (!document) {
-      return res.status(404).json({ error: 'Document not found' });
     
     // Check if MongoDB is connected
     if (mongoose.connection.readyState !== 1) {
       return res.status(404).json({ error: "Document not found" });
     }
     
+    const Model = getCollectionModel(collection);
+    const document = await Model.findByIdAndDelete(id);
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
     }
     
     res.json({ message: 'Document deleted successfully', id });
   } catch (error) {
+    logger.error('Error deleting document:', error);
     res.status(500).json({ error: error.message });
   }
 });
